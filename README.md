@@ -61,6 +61,7 @@ You will need to provide the ```--api_template_file``` to the orchestrator
 Visit the script [here](https://github.com/keng404/bssh_parallel_transfer/blob/master/requeue.md#ica-api-template-generation)
 or 
 create an API template via the [ICA requeue template app](https://keneng87.pyscriptapps.com/ica-analysis-requeue/latest/)
+You may also need to modify how the orchestrator launches your CGW upload via [this section](https://github.com/keng404/ica_to_cgw/blob/main/fcs.ICA_to_CGW.orchestrator.py#L435-L441) 
 2) What if my CGW manifest file changes format?
 Make updates to [samplesheet_utils.py](https://github.com/keng404/ica_to_cgw/blob/main/samplesheet_utils.py#L66-L117) 
 in the appropriate sections

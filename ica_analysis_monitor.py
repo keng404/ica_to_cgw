@@ -42,7 +42,7 @@ def get_project_id(api_key, project_name):
     page_number = 0
     number_of_rows_to_skip = 0
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    endpoint = f"/api/projects?includeHiddenProjects=true"
+    endpoint = f"/api/projects?includeHiddenProjects=true?pageSize={pageSize}"
     full_url = api_base_url + endpoint  ############ create header
     headers = dict()
     headers['accept'] = 'application/vnd.illumina.v3+json'
@@ -54,7 +54,7 @@ def get_project_id(api_key, project_name):
         if 'nextPageToken' in projectPagedList.json().keys():
             nextPageToken = projectPagedList.json()['nextPageToken']
             while remainingRecords > 0:
-                endpoint = f"/api/projects?includeHiddenProjects=true&pageToken={nextPageToken}"
+                endpoint = f"/api/projects?includeHiddenProjects=true&pageToken={nextPageToken}&pageSize={pageSize}"
                 full_url = api_base_url + endpoint  ############ create header
                 projectPagedList = requests.get(full_url, headers=headers)
                 for project in projectPagedList.json()['items']:

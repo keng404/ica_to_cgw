@@ -113,7 +113,7 @@ def get_project_id(api_key, project_name):
         if 'nextPageToken' in projectPagedList.json().keys():
             nextPageToken = projectPagedList.json()['nextPageToken']
             while remainingRecords > 0:
-                endpoint = f"/api/projects?includeHiddenProjects=true&pageToken={nextPageToken}"
+                endpoint = f"/api/projects?includeHiddenProjects=true&pageToken={nextPageToken}&pageSize={pageSize}"
                 full_url = api_base_url + endpoint  ############ create header
                 projectPagedList = requests.get(full_url, headers=headers)
                 for project in projectPagedList.json()['items']:
