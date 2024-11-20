@@ -384,7 +384,7 @@ def main():
                     run_id = f"{run_name}_DRAGEN-R2-{random_string}"
 
                 logging_statement(f"Creating CGW manifest for {run_id}")
-                manifest_file = samplesheet_utils.CGW_sample_manifest_runner(run_id,v2_samplesheet)
+                manifest_file = samplesheet_utils.CGW_sample_manifest_runner(run_id,samplesheet_local_path)
                 ### create FOLDER
                 logging_statement(f"Creating simplified folder {run_id}")
                 folder_id = create_data(my_api_key,destination_project_name, run_id, "FOLDER",filepath="/",project_id=destination_project_id)
