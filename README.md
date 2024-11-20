@@ -19,13 +19,13 @@ These are custom script(s) based on an end-user's use-case
 
 #### [fcs.ICA_to_CGW.orchestrator.py](https://github.com/keng404/ica_to_cgw/blob/main/fcs.ICA_to_CGW.orchestrator.py)
 
-- 1) monitor TSO500 v2.5.2 analysis
-- 2) if analysis is running, queued, or in progress
+1) monitor TSO500 v2.5.2 analysis
+2) if analysis is running, queued, or in progress
 	- Analysis ids are printed out by default ```analyses_monitored_file.txt``` 
 	- It is a list of analysis ids
 	- This can filepath can be customized
 	- No additional action is taken by orchestrator currently
-- 3) if analysis is completed
+3) if analysis is completed
 	- check if analysis is in a triggered analysis table ```analyses_launched_table.txt```
 	- This can filepath can be customized
 	- Format is ```analysis_id_monitored,analysis_id_triggered,run_id```
@@ -36,7 +36,8 @@ These are custom script(s) based on an end-user's use-case
 	- if analysis is not in the triggered analysis table
 		- download v2 samplesheet of belonging to the TSO500 v2.5.2 analysis results 
 		- parse samplesheet and create CGW manifest file
-		- rename TSO500 v2.5.2 analysis results (i.e. create folder based off of the ```run_id```)
+		- rename TSO500 v2.5.2 analysis results
+			- create folder based off of the ```run_id```
 			- upload manifest file
 			- copy data from TSO500 v2.5.2 analysis results 
 				- data copy is monitored and reported out to screen
@@ -50,6 +51,16 @@ These are custom script(s) based on an end-user's use-case
 - add bash_wrapper to run orchestrator script every 5/10 minutes
 - give instructions for setting up Cron job
 - build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
+
+#### fcs.ICA_to_CGW.orchestrator.py FAQs
+
+1) What if the pipeline input to ```CGW upload``` changes?
+Visit the script [here](https://github.com/keng404/bssh_parallel_transfer/blob/master/requeue.md#ica-api-template-generation)
+or 
+create an API template via the [ICA requeue template app](https://keneng87.pyscriptapps.com/ica-analysis-requeue/latest/)
+2) What if my CGW manifest file changes format?
+Make updates to [samplesheet_utils.py](https://github.com/keng404/ica_to_cgw/blob/main/samplesheet_utils.py#L66-L117) 
+in the appropriate sections
 
 #### fcs.ICA_to_CGW.orchestrator.py command line examples
 
