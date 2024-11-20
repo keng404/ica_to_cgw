@@ -32,7 +32,7 @@ These are custom script(s) based on an end-user's use-case
 		- ```analysis_id_monitored``` = analysis_id of TSO500 v2.5.2 analysis
 		- ```analysis_id_triggered``` = analysis_id of CGW upload
 		- ```run_id``` = Sequencing Run ID and parent folder name 
-			- the ```run_id``` will also determine the prefix ```(i.e. f"{folder_basename}.sample_manifest.csv")``` of the CGW manifest file
+			- the ```run_id``` will also determine the prefix ```(i.e. "{run_id}.sample_manifest.csv")``` of the CGW manifest file
 	- if analysis is not in the triggered analysis table
 		- download v2 samplesheet of belonging to the TSO500 v2.5.2 analysis results 
 		- parse samplesheet and create CGW manifest file
