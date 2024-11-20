@@ -14,7 +14,12 @@ from time import sleep
 import random
 
 ##ICA_BASE_URL = "https://ica.illumina.com/ica"
-
+def logging_statement(string_to_print):
+    date_time_obj = dt.now()
+    timestamp_str = date_time_obj.strftime("%Y/%b/%d %H:%M:%S:%f")
+    #############
+    final_str = f"[ {timestamp_str} ] {string_to_print}"
+    return print(f"{final_str}")
 ## helper functions to create objects for the input_data and input_parameters of a 'newly' launched pipeline run
 def create_analysis_parameter_input_object(parameter_template):
     parameters = []
@@ -83,7 +88,8 @@ def parse_analysis_data_input_example(input_example, inputs_to_keep):
 def get_project_id(api_key, project_name):
     projects = []
     pageOffset = 0
-    pageSize = 1000
+    remainingRecords = 1000
+    pageSize = remainingRecords
     page_number = 0
     number_of_rows_to_skip = 0
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
@@ -102,33 +108,31 @@ def get_project_id(api_key, project_name):
     data['includeHiddenProjects'] = 'true'
     try:
         projectPagedList = requests.get(full_url, headers=headers,params = data)
-        if 'totalItemCount' in projectPagedList.json().keys():
-            totalRecords = projectPagedList.json()['totalItemCount']
-            while page_number*pageSize <  totalRecords:
-                #endpoint = f"/api/projects?search={project_name}&includeHiddenProjects=true&pageOffset={number_of_rows_to_skip}&pageSize={pageSize}"
-                endpoint = f"/api/projects"
+        #if 'totalItemCount' in projectPagedList.json().keys():
+       # totalRecords = projectPagedList.json()['totalItemCount']
+        if 'nextPageToken' in projectPagedList.json().keys():
+            nextPageToken = projectPagedList.json()['nextPageToken']
+            while remainingRecords > 0:
+                endpoint = f"/api/projects?includeHiddenProjects=true&pageToken={nextPageToken}"
                 full_url = api_base_url + endpoint  ############ create header
-                data = CaseInsensitiveDict()
-                data['search'] = project_name
-                data['pageOffSet'] = pageOffset
-                data['pageSize'] = pageSize
-                data['includeHiddenProjects'] = 'true'
-                #print(f"FULL_URL: {full_url}")
-                projectPagedList = requests.get(full_url, headers=headers,params = data)
+                projectPagedList = requests.get(full_url, headers=headers)
                 for project in projectPagedList.json()['items']:
-                    projects.append({"name":project['name'],"id":project['id']})
+                    if project['name'] == project_name:
+                        projects.append({"name": project['name'], "id": project['id']})
                 page_number += 1
                 number_of_rows_to_skip = page_number * pageSize
+                nextPageToken = projectPagedList.json()['nextPageToken']
+                remainingRecords = projectPagedList.json()['remainingRecords']
         else:
             for project in projectPagedList.json()['items']:
-                projects.append({"name":project['name'],"id":project['id']})
+                if project['name'] == project_name:
+                    projects.append({"name": project['name'], "id": project['id']})  
+
     except:
-        projectPagedList = requests.get(full_url, headers=headers)
-        print(projectPagedList)
-        print(projects)
+        pprint(projectPagedList,indent = 4)
         raise ValueError(f"Could not get project_id for project: {project_name}")
-    if len(projects)>1:
-        print(projects)
+    if len(projects) > 1:
+        pprint(projects)
         raise ValueError(f"There are multiple projects that match {project_name}")
     else:
         return projects[0]['id']
@@ -288,45 +292,46 @@ def get_project_analysis(api_key,project_id,analysis_id,max_retries = 5):
     except:
         sys.stderr.write(f"Could not get metadata for analysis: {analysis_id}\n")
     return analysis_metadata
-def list_project_analyses(api_key,project_id,max_retries = 5):
+############
+def list_project_analyses(jwt,project_id):
     # List all analyses in a project
     pageOffset = 0
-    pageSize = 1000
+    remainingRecords = 1000
+    pageSize = remainingRecords
     page_number = 0
-    totalRecords = 0
     number_of_rows_to_skip = 0
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    endpoint = f"/api/projects/{project_id}/analyses?pageOffset={pageOffset}&pageSize={pageSize}"
+    endpoint = f"/api/projects/{project_id}/analyses"
     analyses_metadata = []
     full_url = api_base_url + endpoint  ############ create header
-    headers = CaseInsensitiveDict()
-    headers['Accept'] = 'application/vnd.illumina.v3+json'
+    headers = dict()
+    headers['accept'] = 'application/vnd.illumina.v3+json'
     headers['Content-Type'] = 'application/vnd.illumina.v3+json'
-    headers['X-API-Key'] = api_key
+    headers['Authorization'] = f"Bearer {jwt}"
     try:
-        projectAnalysisPagedList = None
-        response_code = 404
-        num_tries = 0
-        while response_code != 200 and num_tries < max_retries:
-            num_tries = num_tries + 1
-            projectAnalysisPagedList = requests.get(full_url, headers=headers)
-            response_code = projectAnalysisPagedList.status_code
-            time.sleep(1)
-        #projectAnalysisPagedList = requests.get(full_url, headers=headers)
-            totalRecords = projectAnalysisPagedList.json()['totalItemCount']
-        while page_number * pageSize < totalRecords:
-            endpoint = f"/api/projects/{project_id}/analyses?pageOffset={number_of_rows_to_skip}&pageSize={pageSize}"
-            full_url = api_base_url + endpoint  ############ create header
-            projectAnalysisPagedList = requests.get(full_url, headers=headers)
+        projectAnalysisPagedList = requests.get(full_url, headers=headers)
+        #totalRecords = projectAnalysisPagedList.json()['totalItemCount']
+        response_code = projectAnalysisPagedList.status_code
+        if 'nextPageToken' in projectAnalysisPagedList.json().keys():
+            nextPageToken = projectAnalysisPagedList.json()['nextPageToken']
+            while remainingRecords > 0:
+                endpoint = f"/api/projects/{project_id}/analyses?pageToken={nextPageToken}"
+                full_url = api_base_url + endpoint  ############ create header
+                projectAnalysisPagedList = requests.get(full_url, headers=headers)
+                for analysis in projectAnalysisPagedList.json()['items']:
+                    analyses_metadata.append(analysis)
+                page_number += 1
+                number_of_rows_to_skip = page_number * pageSize
+                nextPageToken = projectAnalysisPagedList.json()['nextPageToken']
+                remainingRecords = projectAnalysisPagedList.json()['remainingRecords']
+                if page_number % 5 == 0:
+                    logging_statement(f"ANALYSIS_METADATA_REMAINING_RECORDS: {remainingRecords}")
+        else:
             for analysis in projectAnalysisPagedList.json()['items']:
-                analyses_metadata.append(analysis)
-            page_number += 1
-            number_of_rows_to_skip = page_number * pageSize
-            time.sleep(1)
+                analyses_metadata.append(analysis) 
     except:
-        sys.stderr.write(f"Could not get analyses for project: {project_id}")
-        #raise ValueError(f"Could not get analyses for project: {project_id}")
-        analyses_metadata = []
+        pprint(projectAnalysisPagedList, indent = 4)
+        raise ValueError(f"Could not get analyses for project: {project_id}")
     return analyses_metadata
 ################
 ##### code to launch pipeline in ICAv2
@@ -341,10 +346,14 @@ def get_input_template(pipeline_code, api_key,project_name, fixed_input_data_fie
     # users can define an analysis_id of interest
     if analysis_id is None:
         # find most recent analysis_id for the pipeline_code that succeeeded
+        analyses_dict = {}
         for analysis_idx,analysis in enumerate(project_analyses):
             if analysis['pipeline']['code'] == pipeline_code and analysis['status'] == "SUCCEEDED":
-                analysis_id = analysis['id']
-                continue
+                analyses_dict[analysis['endDate']] = analysis
+        
+        sorted_keys = sorted(analyses_dict.keys())
+        analysis_id = analyses_dict[sorted_keys[len(sorted_keys)-1]]['id']
+        print(f"Using {analysis_id}")
     templates = {}  # a dict that returns the templates we'll use to launch an analysis
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
     # grab the input files for the given analysis_id
@@ -364,7 +373,7 @@ def get_input_template(pipeline_code, api_key,project_name, fixed_input_data_fie
         parameter_settings = parameter_response.json()['items']
     except:
         raise ValueError(f"Could not get parameters for the project analysis {analysis_id}")
-    # return both the input data template and parameter settings for this pipelineß
+    # return both the input data template and parameter settings for this pipeline
     input_data_template = parse_analysis_data_input_example(input_data_example, fixed_input_data_fields)
     parameter_settings_template = create_analysis_parameter_input_object_extended(parameter_settings,params_to_keep)
     templates['input_data'] = input_data_template
