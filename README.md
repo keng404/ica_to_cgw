@@ -47,7 +47,7 @@ These are custom script(s) based on an end-user's use-case
 		- update triggered analysis table ```analyses_launched_table.txt```
 			- with all the ```analysis_id_monitored```,```analysis_id_triggered```, and ```run_id``` we've collected
 
-#### fcs.ICA_to_CGW.orchestrator.py [TODO]
+#### fcs.ICA_to_CGW.orchestrator.py TODO list
 - add bash_wrapper to run orchestrator script every 5/10 minutes
 - give instructions for setting up Cron job
 - build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
