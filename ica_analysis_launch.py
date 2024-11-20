@@ -293,7 +293,7 @@ def get_project_analysis(api_key,project_id,analysis_id,max_retries = 5):
         sys.stderr.write(f"Could not get metadata for analysis: {analysis_id}\n")
     return analysis_metadata
 ############
-def list_project_analyses(jwt,project_id):
+def list_project_analyses(api_key,project_id):
     # List all analyses in a project
     pageOffset = 0
     remainingRecords = 1000
@@ -301,13 +301,13 @@ def list_project_analyses(jwt,project_id):
     page_number = 0
     number_of_rows_to_skip = 0
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    endpoint = f"/api/projects/{project_id}/analyses"
+    endpoint = f"/api/projects/{project_id}/analyses?pageSize={pageSize}"
     analyses_metadata = []
     full_url = api_base_url + endpoint  ############ create header
     headers = dict()
     headers['accept'] = 'application/vnd.illumina.v3+json'
     headers['Content-Type'] = 'application/vnd.illumina.v3+json'
-    headers['Authorization'] = f"Bearer {jwt}"
+    headers['X-API-Key'] = f"{api_key}"
     try:
         projectAnalysisPagedList = requests.get(full_url, headers=headers)
         #totalRecords = projectAnalysisPagedList.json()['totalItemCount']
@@ -315,7 +315,7 @@ def list_project_analyses(jwt,project_id):
         if 'nextPageToken' in projectAnalysisPagedList.json().keys():
             nextPageToken = projectAnalysisPagedList.json()['nextPageToken']
             while remainingRecords > 0:
-                endpoint = f"/api/projects/{project_id}/analyses?pageToken={nextPageToken}"
+                endpoint = f"/api/projects/{project_id}/analyses?pageToken={nextPageToken}&pageSize={pageSize}"
                 full_url = api_base_url + endpoint  ############ create header
                 projectAnalysisPagedList = requests.get(full_url, headers=headers)
                 for analysis in projectAnalysisPagedList.json()['items']:

@@ -87,7 +87,7 @@ def list_project_analyses(api_key,project_id):
     page_number = 0
     number_of_rows_to_skip = 0
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    endpoint = f"/api/projects/{project_id}/analyses"
+    endpoint = f"/api/projects/{project_id}/analyses?pageSize={pageSize}"
     analyses_metadata = []
     full_url = api_base_url + endpoint  ############ create header
     headers = dict()
@@ -101,9 +101,10 @@ def list_project_analyses(api_key,project_id):
         if 'nextPageToken' in projectAnalysisPagedList.json().keys():
             nextPageToken = projectAnalysisPagedList.json()['nextPageToken']
             while remainingRecords > 0:
-                endpoint = f"/api/projects/{project_id}/analyses?pageToken={nextPageToken}"
+                endpoint = f"/api/projects/{project_id}/analyses?pageToken={nextPageToken}&pageSize={pageSize}"
                 full_url = api_base_url + endpoint  ############ create header
                 projectAnalysisPagedList = requests.get(full_url, headers=headers)
+                ##pprint(projectAnalysisPagedList.json(),indent=4)
                 for analysis in projectAnalysisPagedList.json()['items']:
                     analyses_metadata.append(analysis)
                 page_number += 1
