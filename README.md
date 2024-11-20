@@ -52,8 +52,9 @@ These are custom script(s) based on an end-user's use-case
 - build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
 
 #### fcs.ICA_to_CGW.orchestrator.py command line examples
-# TEST1 : analysis you monitor and trigger will be in the same ICA project
+
 ```bash
+# TEST1 : analysis you monitor and trigger will be in the same ICA project
 python fcs.ICA_to_CGW.orchestrator.py --api_key_file /opt/api_key.txt --source_project_name ken_debug --pipeline_name_to_monitor 'DRAGEN Somatic Enrichment 4-3-6 Clone' --pipeline_name_to_trigger 'DRAGEN_REPORTS_STANDALONE_CUSTOM'
  
  or
