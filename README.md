@@ -4,7 +4,7 @@ An orchestration approach to monitor analyses from Illumina Connected Analytics 
 
 ## approach
 
-### helper functions
+## helper functions
 
 - [ica_analysis_monitor.py](https://github.com/keng404/ica_to_cgw/blob/main/ica_analysis_monitor.py)
 	- API calls to monitor a given analyses
@@ -13,11 +13,11 @@ An orchestration approach to monitor analyses from Illumina Connected Analytics 
 - [samplesheet_utils.py](https://github.com/keng404/ica_to_cgw/blob/main/samplesheet_utils.py)
 	- functions to read and parse v2 samplesheet and craft CGW manifest file
 
-### orchestrators
+## orchestrators
 
 These are custom script(s) based on an end-user's use-case
 
-#### [fcs.ICA_to_CGW.orchestrator.py](https://github.com/keng404/ica_to_cgw/blob/main/fcs.ICA_to_CGW.orchestrator.py)
+## [fcs.ICA_to_CGW.orchestrator.py](https://github.com/keng404/ica_to_cgw/blob/main/fcs.ICA_to_CGW.orchestrator.py)
 
 1) monitor TSO500 v2.5.2 analysis
 2) if analysis is running, queued, or in progress
@@ -47,23 +47,28 @@ These are custom script(s) based on an end-user's use-case
 		- update triggered analysis table ```analyses_launched_table.txt```
 			- with all the ```analysis_id_monitored```,```analysis_id_triggered```, and ```run_id``` we've collected
 
-#### fcs.ICA_to_CGW.orchestrator.py TODO list
+## fcs.ICA_to_CGW.orchestrator.py TODO list
 - add bash_wrapper to run orchestrator script every 5/10 minutes
 - give instructions for setting up Cron job
 - build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
 - modify analysis lookup from [getProjectAnalyses](https://ica.illumina.com/ica/api/swagger/index.html#/Project%20Analysis/getAnalyses) to [searchAnalyses](https://ica.illumina.com/ica/api/swagger/index.html#/Project%20Analysis/searchAnalyses)
 
-#### fcs.ICA_to_CGW.orchestrator.py FAQs
-
+## fcs.ICA_to_CGW.orchestrator.py FAQs
+1) How do I generate an API key?
+See this [ICA help page](https://help.ica.illumina.com/get-started/gs-getstarted#api-keys). You can either save during key generation or copy+paste to any text file of your choosing.
 1) What if the pipeline input to ```CGW upload``` changes?
+You will need to provide the ```--api_template_file``` to the orchestrator
 Visit the script [here](https://github.com/keng404/bssh_parallel_transfer/blob/master/requeue.md#ica-api-template-generation)
 or 
 create an API template via the [ICA requeue template app](https://keneng87.pyscriptapps.com/ica-analysis-requeue/latest/)
 2) What if my CGW manifest file changes format?
 Make updates to [samplesheet_utils.py](https://github.com/keng404/ica_to_cgw/blob/main/samplesheet_utils.py#L66-L117) 
 in the appropriate sections
+3) What happens if analysis fails (either TSO500 or CGW upload)?
+Only the happy-path has been implemented. So the orchestrator has no retry logic.
+You can use  the script [here](https://github.com/keng404/bssh_parallel_transfer/blob/master/requeue.md) or the [ICA requeue template app](https://keneng87.pyscriptapps.com/ica-analysis-requeue/latest/) if you don't have a template handy. Presuming you have the ICA CLI installed you should be able to copy+paste these templates.
 
-#### fcs.ICA_to_CGW.orchestrator.py command line examples
+## fcs.ICA_to_CGW.orchestrator.py command line examples
 
 ```bash
 # TEST1 : analysis you monitor and trigger will be in the same ICA project
