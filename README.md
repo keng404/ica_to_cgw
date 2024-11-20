@@ -6,18 +6,18 @@ An orchestration approach to monitor analyses from Illumina Connected Analytics 
 
 ### helper functions
 
-- ica_analysis_monitor.py
+- [ica_analysis_monitor.py](https://github.com/keng404/ica_to_cgw/blob/main/ica_analysis_monitor.py)
 	- API calls to monitor a given analyses
-- ica_analysis_launch.py
+- [ica_analysis_launch.py](https://github.com/keng404/ica_to_cgw/blob/main/ica_analysis_launch.py)
 	- API calls to identify a previously run analysis and craft an API template
-- samplesheet_utils.py
+- [samplesheet_utils.py](https://github.com/keng404/ica_to_cgw/blob/main/samplesheet_utils.py)
 	- functions to read and parse v2 samplesheet and craft CGW manifest file
 
 ### orchestrators
 
 These are custom script(s) based on an end-user's use-case
 
-#### fcs.ICA_to_CGW.orchestrator.py
+#### [fcs.ICA_to_CGW.orchestrator.py](https://github.com/keng404/ica_to_cgw/blob/main/fcs.ICA_to_CGW.orchestrator.py)
 
 - 1) monitor TSO500 v2.5.2 analysis
 - 2) if analysis is running, queued, or in progress
@@ -49,11 +49,11 @@ These are custom script(s) based on an end-user's use-case
 #### fcs.ICA_to_CGW.orchestrator.py [TODO]
 - add bash_wrapper to run orchestrator script every 5/10 minutes
 - give instructions for setting up Cron job
-- build and push official docker image based-off of this Dockerfile
+- build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
 
 #### fcs.ICA_to_CGW.orchestrator.py command line examples
 # TEST1 : analysis you monitor and trigger will be in the same ICA project
-bash```
+```bash
 python fcs.ICA_to_CGW.orchestrator.py --api_key_file /opt/api_key.txt --source_project_name ken_debug --pipeline_name_to_monitor 'DRAGEN Somatic Enrichment 4-3-6 Clone' --pipeline_name_to_trigger 'DRAGEN_REPORTS_STANDALONE_CUSTOM'
  
  or
