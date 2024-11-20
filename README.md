@@ -51,6 +51,7 @@ These are custom script(s) based on an end-user's use-case
 - add bash_wrapper to run orchestrator script every 5/10 minutes
 - give instructions for setting up Cron job
 - build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
+- modify analysis lookup from [getProjectAnalyses](https://ica.illumina.com/ica/api/swagger/index.html#/Project%20Analysis/getAnalyses) to [searchAnalyses](https://ica.illumina.com/ica/api/swagger/index.html#/Project%20Analysis/searchAnalyses)
 
 #### fcs.ICA_to_CGW.orchestrator.py FAQs
 
