@@ -51,7 +51,7 @@ These are custom script(s) based on an end-user's use-case
 - add bash_wrapper to run orchestrator script every 5/10 minutes
 - give instructions for setting up Cron job
 - build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
-
+- [OPTIONAL] Add data management functionality to remove linked data or duplicate data?? 
 
 ## fcs.ICA_to_CGW.orchestrator.py FAQs
 1) How do I generate an API key?

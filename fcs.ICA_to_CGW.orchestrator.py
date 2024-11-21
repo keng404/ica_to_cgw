@@ -76,7 +76,7 @@ def get_data(data_id,project_id):
 def create_data(api_key,project_name, filename, data_type, folder_id=None, format_code=None,filepath=None,project_id=None):
     if project_id is None:
         project_id = get_project_id(api_key, project_name)
-    api_base_url = ICA_BASE_URL + "/rest"
+    api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
     endpoint = f"/api/projects/{project_id}/data"
     full_url = api_base_url + endpoint
     ############ create header
@@ -388,6 +388,8 @@ def main():
                 ### create FOLDER
                 logging_statement(f"Creating simplified folder {run_id}")
                 folder_id = create_data(my_api_key,destination_project_name, run_id, "FOLDER",filepath="/",project_id=destination_project_id)
+                ### set folder_id to output_folder_id to make the downstream pipeline trigger consistent (even if we don't use this method)
+                folder_id = output_folder_id 
                 ###### copying data to folder --- this will be folder uploaded to CGW
                 logging_statement(f"Starting uploads to {run_id}")
                 for dtc in data_to_copy:
