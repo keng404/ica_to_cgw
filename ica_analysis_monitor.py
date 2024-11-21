@@ -167,9 +167,59 @@ def get_analysis_metadata(api_key,project_id,analysis_id):
 
 def get_analysis_output(api_key,project_id,analysis_metadata):
     ### assume user has not output the results of analysis to custom directory
+    #search_query_path = "/" + analysis_metadata['reference'] + "/" 
     search_query_path = "/" + analysis_metadata['reference'] + "/" 
     search_query_path_str = [re.sub("/", "%2F", x) for x in search_query_path]
     search_query_path = "".join(search_query_path_str)
+    datum = []
+    pageOffset = 0
+    pageSize = 1000
+    remainingRecords = pageSize
+    page_number = 0
+    number_of_rows_to_skip = 0
+    api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
+    endpoint = f"/api/projects/{project_id}/data?filePath={search_query_path}&filePathMatchMode=STARTS_WITH_CASE_INSENSITIVE&pageSize={pageSize}"
+    #https://ica.illumina.com/ica/rest/api/projects/c78835ab-a488-4b97-848d-e606b0f31772/data?filePath=%2FTEST-da022b0d-fc48-4bd8-8de0-aab6727c2a9f%2F&filePathMatchMode=STARTS_WITH_CASE_INSENSITIVE&pageSize=1000
+    full_url = api_base_url + endpoint  ############ create header
+    headers = CaseInsensitiveDict()
+    headers['Accept'] = 'application/vnd.illumina.v3+json'
+    headers['Content-Type'] = 'application/vnd.illumina.v3+json'
+    headers['X-API-Key'] = api_key
+    try:
+        #logging_statement(f"MY_URL: {full_url}")
+        projectDataPagedList = requests.get(full_url, headers=headers)
+        if 'nextPageToken' in projectDataPagedList.json().keys():
+            nextPageToken = projectDataPagedList.json()['nextPageToken']
+            ##logging_statement(f"TOKEN: {nextPageToken}")
+            while remainingRecords > 0:
+                endpoint = f"/api/projects/{project_id}/data?filePath={search_query_path}&filePathMatchMode=STARTS_WITH_CASE_INSENSITIVE&pageToken={nextPageToken}&pageSize={pageSize}"
+                full_url = api_base_url + endpoint  ############ create header
+                projectDataPagedList = requests.get(full_url, headers=headers)
+                for projectData in projectDataPagedList.json()['items']:
+                    if re.search(analysis_metadata['reference'],projectData['data']['details']['path']) is not None:
+                        datum.append({"name": projectData['data']['details']['name'], "id": projectData['data']['id'],
+                            "path": projectData['data']['details']['path']})
+                page_number += 1
+                number_of_rows_to_skip = page_number * pageSize
+                nextPageToken = projectDataPagedList.json()['nextPageToken']
+                remainingRecords = projectDataPagedList.json()['remainingRecords']
+        else:
+            for projectData in projectDataPagedList.json()['items']:
+                if re.search(analysis_metadata['reference'],projectData['data']['details']['path']) is not None:
+                    datum.append({"name": projectData['data']['details']['name'], "id": projectData['data']['id'],
+                            "path": projectData['data']['details']['path']}) 
+
+    except:
+        print(f"Could not get results for project: {project_id} looking for filePath: {search_query_path}")
+    return datum
+
+def get_analysis_folder(api_key,project_id,analysis_metadata):
+    ### assume user has not output the results of analysis to custom directory
+    #search_query_path = "/" + analysis_metadata['reference'] + "/" 
+    search_query_path = "/" + analysis_metadata['reference'] 
+    search_query_path_str = [re.sub("/", "%2F", x) for x in search_query_path]
+    search_query_path = "".join(search_query_path_str)
+
     datum = []
     pageOffset = 0
     pageSize = 1000

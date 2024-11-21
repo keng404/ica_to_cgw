@@ -11,8 +11,12 @@
 #    - load in (API) template or craft our own
 #    - identify which inputs are hard-coded or not
 #    - log in table which analysis id, project id, time submitted for downstream pipeline
+##### import helper modules
 import ica_analysis_monitor
 import ica_analysis_launch
+import samplesheet_utils
+import ica_data_transfer
+######## import python modules
 import argparse
 import time
 import os
@@ -25,6 +29,8 @@ import json
 from datetime import datetime as dt
 import re
 import csv
+import boto3
+from botocore.exceptions import ClientError
 ### helper functions
 def logging_statement(string_to_print):
     date_time_obj = dt.now()
@@ -35,11 +41,18 @@ def logging_statement(string_to_print):
 ### This function returns data found within first-level of analysis output
 #### to avoid redundant copy jobs
 def get_analysis_output_to_copy(analysis_output,analysis_metadata):
+    ##pprint(analysis_output,indent=4)
     output_folder_path = None
+    logging_statement(f"analysis_metadata['reference']: {analysis_metadata['reference']}")
     for output in analysis_output:
         path_normalized = output['path'].strip("/$")
+        ###logging_statement(f"path_normalized: {path_normalized}")
         if os.path.basename(path_normalized) == analysis_metadata['reference']:
             output_folder_path = output['path']
+    #### edge case --- output_folder_path is not listed in the analysis_output object
+    if output_folder_path is None:
+        output_folder_path = "/" + analysis_metadata['reference'] 
+
     #### copy data to new folder --- only want files + folders in parent directory
     data_to_copy = []
     if output_folder_path is not None:
@@ -49,15 +62,17 @@ def get_analysis_output_to_copy(analysis_output,analysis_metadata):
             #path_remainder = re.sub(output_folder_path,"",path_normalized)
             path_remainder = path_normalized.replace(analysis_metadata['reference'],"")
             path_remainder = path_remainder.strip("^/+")
+            #logging_statement(f"path_normalized: {path_normalized}")
+            #logging_statement(f"path_remainder: {path_remainder}")
             if path_remainder != "":
                 path_remainder_split = path_remainder.split('/')
                 if len(path_remainder_split) == 1:
-                    #print(f"path_remainder: {path_remainder}")
-                    #print(f"data_to_copy_path: {output['path']}")
+                    #logging_statement(f"path_remainder: {path_remainder}")
+                    logging_statement(f"data_to_copy_path: {output['path']}")
                     data_to_copy.append(output['id'])
     return data_to_copy
 
-def get_data(data_id,project_id):
+def get_data(api_key,data_id,project_id):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
     endpoint = f"/api/projects/{project_id}/data/{data_id}"
     full_url = api_base_url + endpoint  ############ create header
@@ -71,7 +86,12 @@ def get_data(data_id,project_id):
         logging_statement(f"data {data_id} not found in project {project_id}")
         return None
     data_metadata = response.json()
-    return data_metadata['data']['details']['status']
+    #pprint(data_metadata,indent=4)
+    if 'data' in data_metadata.keys():
+        return data_metadata['data']['details']['status']
+    else:
+        return None
+    return logging_statement(f"Data lookup for {data_id} and {project_id} completed")
 
 def create_data(api_key,project_name, filename, data_type, folder_id=None, format_code=None,filepath=None,project_id=None):
     if project_id is None:
@@ -101,15 +121,28 @@ def create_data(api_key,project_name, filename, data_type, folder_id=None, forma
         payload['formatCode'] = format_code
     request_params = {"method": "post", "url": full_url, "headers": headers, "data": json.dumps(payload)}
     response = requests.post(full_url, headers=headers, data=json.dumps(payload))
-    if response.status_code not in [201, 400, 409]:
+    data_metadata = response.json()
+    if response.status_code not in [201,409]:
         pprint(json.dumps(response.json()),indent=4)
         raise ValueError(f"Could not create data {filename}")
+    #### handle case where data (placeholder) exists
+    if response.status_code in [409]:
+        data_metadata = ica_analysis_launch.list_data(api_key,filename,project_id)
+        if len(data_metadata) > 0:
+            data_metadata = data_metadata[0]
+        else:
+            raise ValueError(f"Cannot find data {filename} in the project {project_id}")
     #if 'data' not in keys(response.json()):
-    pprint(json.dumps(response.json()),indent = 4)
+    ##pprint(json.dumps(response.json()),indent = 4)
     #raise ValueError(f"Could not obtain data id for {filename}")
-    return response.json()['data']['id']
+    ##pprint(data_metadata,indent=4)
+    if 'data' not in data_metadata.keys():
+        data_id = data_metadata['id']
+    else:
+        data_id = data_metadata['data']['id']
+    return data_id
 
-def copy_data(data_to_copy,folder_id,destination_project):
+def copy_data(api_key,data_to_copy,folder_id,destination_project):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
     endpoint = f"/api/projects/{destination_project}/data/dataCopyBatch"
     full_url = api_base_url + endpoint  ############ create header
@@ -118,8 +151,7 @@ def copy_data(data_to_copy,folder_id,destination_project):
     headers['Content-Type'] = 'application/vnd.illumina.v3+json'
     headers['X-API-Key'] = api_key
     collected_data = {}
-    collected_data['items'] = {}
-    collected_data['items']['dataId'] = data_to_copy
+    collected_data['items'] = [{"dataId": data_to_copy}]
     collected_data['destinationFolderId'] =  folder_id
     collected_data['copyUserTags'] = True
     collected_data['copyTechnicalTags'] = True
@@ -127,57 +159,66 @@ def copy_data(data_to_copy,folder_id,destination_project):
     collected_data['actionOnExist'] = 'OVERWRITE'
     try:
         response = requests.post(full_url, headers = headers,data = json.dumps(collected_data))
+        if response.status_code >= 400:
+            pprint(json.dumps(response.json()), indent=4)
+            raise ValueError(f"Could not copy data: {data_to_copy} to {destination_project}")
     except:
         raise ValueError(f"Could not copy data: {data_to_copy} to {destination_project}")
     copy_details = response.json()
-    pprint(copy_details, indent=4)
+    #pprint(copy_details, indent=4)
     return copy_details
 
-def copy_batch_status(batch_id,project_id):
+def copy_batch_status(api_key,batch_id,project_id):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
     endpoint = f"/api/projects/{destination_project}/data/dataCopyBatch/{batch_id}"
     full_url = api_base_url + endpoint  ############ create header
     headers = CaseInsensitiveDict()
     headers['Accept'] = 'application/vnd.illumina.v3+json'
-    headers['Content-Type'] = 'application/vnd.illumina.v3+json'
+    ##headers['Content-Type'] = 'application/vnd.illumina.v3+json'
     headers['X-API-Key'] = api_key
     try:
-        response = requests.get(full_url, headers = headers,)
+        response = requests.get(full_url, headers = headers)
     except:
         raise ValueError(f"Could not get copy batch status : {batch_id} to {project_id}")
     batch_details = response.json()
     pprint(batch_details, indent=4)
     return batch_details
 
-def link_data(data_to_link,destination_project):
+def link_data(api_key,data_to_link,destination_project):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
     endpoint = f"/api/projects/{destination_project}/data/dataLinkingBatch"
     full_url = api_base_url + endpoint  ############ create header
-    headers = CaseInsensitiveDict()
-    headers['Accept'] = 'application/vnd.illumina.v4+json'
-    headers['Content-Type'] = 'application/vnd.illumina.v4+json'
+    headers = {}
+    headers['accept'] = 'application/vnd.illumina.v3+json'
+    headers['Content-Type'] = 'application/vnd.illumina.v3+json'
     headers['X-API-Key'] = api_key
     collected_data = {}
-    collected_data['items'] = {}
-    collected_data['items']['dataId'] = data_to_link
+    collected_data['items'] = []
+    dtl = {}
+    dtl['dataId'] = data_to_link
+    collected_data['items'].append(dtl)
+    #data = '{"items":[{"dataId": ' + f"'{data_to_link}'" + "}]}'"
     try:
+        #response = requests.post(full_url, headers = headers,data = data)
         response = requests.post(full_url, headers = headers,data = json.dumps(collected_data))
+        if response.status_code >= 400:
+            pprint(json.dumps(response.json()), indent=4)
+            raise ValueError(f"Could not link data: {data_to_link} to {destination_project}")
     except:
         raise ValueError(f"Could not link data: {data_to_link} to {destination_project}")
     link_details = response.json()
-    pprint(link_details, indent=4)
     return link_details
 
-def link_batch_status(batch_id,project_id):
+def link_batch_status(api_key,batch_id,project_id):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    endpoint = f"/api/projects/{destination_project}/data/dataLinkingBatch/{batch_id}"
+    endpoint = f"/api/projects/{project_id}/data/dataLinkingBatch/{batch_id}"
     full_url = api_base_url + endpoint  ############ create header
     headers = CaseInsensitiveDict()
     headers['Accept'] = 'application/vnd.illumina.v3+json'
-    headers['Content-Type'] = 'application/vnd.illumina.v3+json'
+    ##headers['Content-Type'] = 'application/vnd.illumina.v3+json'
     headers['X-API-Key'] = api_key
     try:
-        response = requests.get(full_url, headers = headers,)
+        response = requests.get(full_url, headers = headers)
     except:
         raise ValueError(f"Could not get link batch status : {batch_id} to {project_id}")
     batch_details = response.json()
@@ -196,6 +237,7 @@ def main():
     parser.add_argument('--destination_project_name',default=None, type=str, help="DESTINATION ICA project name")
     parser.add_argument('--pipeline_name_to_monitor',default=None, type=str, help="Pipeline name to monitor")
     parser.add_argument('--pipeline_name_to_trigger',default=None, type=str, help="Pipeline name to trigger")
+    parser.add_argument('--cgw_folder_character_limit',default=150, type=int, help="CGW Character limit of Run Folder Name")
     parser.add_argument('--analyses_monitored_file', default='analyses_monitored_file.txt', type=str, help="ICA analysis id")
     parser.add_argument('--analyses_launched_table', default='analyses_launched_table.txt', type=str, help="ICA analysis name --- analysis user reference")
     parser.add_argument('--api_key_file', default=None, type=str, help="file that contains API-Key")
@@ -333,7 +375,8 @@ def main():
                 #print(f"analysis_output: {analysis_output}")
                 #### folder path
                 data_to_copy = get_analysis_output_to_copy(analysis_output,analysis_metadata)
-                print(f"Data to copy: {data_to_copy}")
+                logging_statement(f"Data to copy: {data_to_copy}")
+                
                 ###########
                 search_query_path = "/" + analysis_metadata['reference'] + "/" 
                 output_folder_path = None
@@ -347,63 +390,106 @@ def main():
                         output_folder_id = output['id']
                         output_folder_path = output['path']
                         run_id = analysis_metadata['reference']
-                    elif os.path.basename(path_normalized) == "SampleSheet.csv":
+                    elif os.path.basename(path_normalized) == "SampleSheet.csv" and re.search("Logs_Intermediates",output['path']) is not None:
+                        logging_statement(f"{output['path']}")
                         samplesheet_id = output['id']
                         samplesheet_path = output['path']
+                #### Edge-case analysis output_folder_path is not found in analysis_output
+                if output_folder_id is None:
+                    folder_query = ica_analysis_monitor.get_analysis_folder(my_api_key,source_project_id,analysis_metadata)
+                    output_folder_id = folder_query[0]['id']
+                    output_folder_path = folder_query[0]['path']
+                    run_id = analysis_metadata['reference']
                 logging_statement(f"output folder id is: {output_folder_id}")
+
                 ### if SOURCE ICA PROJECT is not the same as DESTINATION ICA PROJECT, then link the output data
                 if source_project_id != destination_project_id:
                     logging_statement(f"Checking if output folder id: {output_folder_id} is in project {destination_project_id}")
-                    folder_exists = get_data(output_folder_id,destination_project_id)
+                    folder_exists = get_data(my_api_key,output_folder_id,destination_project_id)
                     if folder_exists is None:
-                        link_batch_id = link_data(output_folder_id,destination_project_id)
-                        batch_status = link_batch_status(link_batch_id,destination_project_id)
+                        link_batch = link_data(my_api_key,output_folder_id,destination_project_id)
+                        link_batch_id = link_batch['id']
+                        batch_status = link_batch_status(my_api_key,link_batch_id,destination_project_id)
                         while batch_status['status'] != "SUCCEEDED":
                             logging_statement(f"Checking on linking batch job {link_batch_id}")
-                            batch_status = link_batch_status(link_batch_id,destination_project_id)
+                            batch_status = link_batch_status(my_api_key,link_batch_id,destination_project_id)
                             time.sleep(3)
                         logging_statement(f"Linking completed for {output_folder_id}")
                             
                 ### Create sample manifest file for CGW and upload to ICA
-                import samplesheet_utils
                 #### download samplesheet 
-                ### 
+                ########## Error out if no samplesheet is found instead of moving on to next analysis?
                 if samplesheet_id is None:
                     raise ValueError(f"Could not find SampleSheet.csv in {output_folder_path}")
-                
-                logging_statement(f"Downloading SampleSheet locally")
-                v2_samplesheet = ica_analysis_monitor.download_file(my_api_key,project_id,samplesheet_id,os.getcwd())
+                ############################
                 samplesheet_local_path = os.path.join(os.getcwd(),os.path.basename(samplesheet_path))
-
-                logging_statement(f"Getting RunName from {samplesheet_local_path}")
-                run_name = samplesheet_utils.get_run_name(samplesheet_local_path)
-                if run_name is not None:
-                    ### get the linux epoch time in seconds
-                    timestamp = dt.now().timestamp()
-                    random_string = round(timestamp)
-                    run_id = f"{run_name}_DRAGEN-R2-{random_string}"
-
+                logging_statement(f"Downloading SampleSheet locally")
+                #v2_samplesheet = ica_analysis_monitor.download_file(my_api_key,source_project_id,samplesheet_id,samplesheet_local_path)
+                creds = ica_data_transfer.get_temporary_credentials(my_api_key,source_project_id, samplesheet_id)
+                ica_data_transfer.set_temp_credentials(creds)
+                ica_data_transfer.download_file(samplesheet_local_path,creds)
+                ### create new simlpified RUN NAME if the analysis output folder name is more than 150 characters
+                if len([x for x in run_id]) > args.cgw_folder_character_limit:
+                    logging_statement(f"Changing RUN_ID for {run_id} because {run_id} is > {args.cgw_folder_character_limit} characters long")
+                    logging_statement(f"Looking for RunName from {samplesheet_local_path}")
+                    run_name = samplesheet_utils.get_run_name(samplesheet_local_path)
+                    if run_name is not None:
+                        ### get the linux epoch time in seconds
+                        timestamp = dt.now().timestamp()
+                        random_string = round(timestamp)
+                        run_id = f"{run_name}_DRAGEN-R2-{random_string}"
+                    else:
+                        logging_statement(f"Looking for RunName from analysis output {id}")
+                        for output in analysis_output:
+                            if os.path.basename(output['path']) == "input.json" and re.search("Nextflow",output['path']) is not None:
+                                input_json_id = output['id']
+                                input_json_local_path = os.path.join(os.getcwd(),os.path.basename(output['path']))
+                                #input_json = ica_analysis_monitor.download_file(my_api_key,source_project_id,input_json_id,input_json_local_path)
+                                creds = ica_data_transfer.get_temporary_credentials(my_api_key,source_project_id, input_json_id)
+                                ica_data_transfer.set_temp_credentials(creds)
+                                ica_data_transfer.download_file(input_json_local_path,creds)
+                                with open(input_json_local_path) as f:
+                                    d = json.load(f)
+                                if 'run_folder' in d.keys():
+                                    run_name = d['run_folder']
+                                    timestamp = dt.now().timestamp()
+                                    random_string = round(timestamp)
+                                    run_id = f"{run_name}_DRAGEN-R2-{random_string}"
+                ###############                    
                 logging_statement(f"Creating CGW manifest for {run_id}")
                 manifest_file = samplesheet_utils.CGW_sample_manifest_runner(run_id,samplesheet_local_path)
-                ### create FOLDER
-                logging_statement(f"Creating simplified folder {run_id}")
-                folder_id = create_data(my_api_key,destination_project_name, run_id, "FOLDER",filepath="/",project_id=destination_project_id)
-                ### set folder_id to output_folder_id to make the downstream pipeline trigger consistent (even if we don't use this method)
-                folder_id = output_folder_id 
-                ###### copying data to folder --- this will be folder uploaded to CGW
-                logging_statement(f"Starting uploads to {run_id}")
-                for dtc in data_to_copy:
-                    copy_batch_id = copy_data(dtc,folder_id,destination_project_id)
-                    batch_status = copy_batch_status(copy_batch_id,destination_project_id)
-                    while batch_status['status'] != "SUCCEEDED":
-                        logging_statement(f"Checking on copy batch job {link_batch_id}")
-                        batch_status = copy_batch_status(copy_batch_id,destination_project_id)
-                        time.sleep(3)
-                    logging_statement(f"Copying completed for {dtc}")
+                ###############
+                ### create new simlpified FOLDER if the analysis output folder name is more than 150 characters
+                if len([x for x in run_id]) > args.cgw_folder_character_limit:
+                    logging_statement(f"Creating simplified folder {run_id} because {run_id} is > {args.cgw_folder_character_limit} characters long")
+                    folder_id = create_data(my_api_key,destination_project_name, run_id, "FOLDER",filepath="/",project_id=destination_project_id)
+                    ### set output_folder_id to  folder_id  to make the downstream pipeline trigger consistent (even if we don't use this method)
+                    output_folder_id = folder_id 
+                    ###### copying data to folder --- this will be folder uploaded to CGW
+                    logging_statement(f"Starting uploads to {run_id}")
+                    for dtc in data_to_copy:
+                        copy_batch = copy_data(my_api_key,dtc,folder_id,destination_project_id)
+                        copy_batch_id = copy_batch['id']
+                        batch_status = copy_batch_status(my_api_key,copy_batch_id,destination_project_id)
+                        while batch_status['status'] != "SUCCEEDED":
+                            logging_statement(f"Checking on copy batch job {link_batch_id}")
+                            batch_status = copy_batch_status(my_api_key,copy_batch_id,destination_project_id)
+                            time.sleep(3)
+                        logging_statement(f"Copying completed for {dtc}")
+                    logging_statement(f"Copying completed for {run_id}")
+                    
+                ### upload manifest file to analysis folder and get data id back from ICA, we'll use this to launch downstream pipeline
+                logging_statement(f"Upload {manifest_file} to ICA")
+                if source_project_id != destination_project_id:
+                    manifest_file_id = create_data(my_api_key,destination_project_name, os.path.basename(manifest_file), "FILE",folder_id=output_folder_id,project_id=destination_project_id)
+                else: 
+                    manifest_file_id = create_data(my_api_key,destination_project_name, os.path.basename(manifest_file), "FILE",filepath="/",project_id=destination_project_id)
+                ### perform actual upload
+                creds = ica_data_transfer.get_temporary_credentials(my_api_key,destination_project_id, manifest_file_id)
+                ica_data_transfer.set_temp_credentials(creds)
+                ica_data_transfer.upload_file(manifest_file,creds)
+                ##############################
 
-                ### upload manifest file to newly created folder and get data id back from ICA, we'll use this to launch downstream pipeline
-                logging_statement(f"Upload {manifest_file} to {run_id}")
-                manifest_file_id = create_data(my_api_key,destination_project_name, os.path.basename(manifest_file), "FILE",folder_id=folder_id,project_id=destination_project_id)
                 ### read-in template for downstream pipeline if available or create a template
                 if args.api_template_file is not None:
                     input_data_fields_to_keep  = []
@@ -445,6 +531,7 @@ def main():
                 logging_statement(f"Launching downstream analysis for {pipeline_run_name}")
                 test_launch = ica_analysis_launch.launch_pipeline_analysis(my_api_key, destination_project_id, pipeline_name_to_trigger_id, my_data_inputs, my_params,my_tags, my_storage_analysis_id, pipeline_run_name,workflow_language)
                 if test_launch is not None:
+                    metadata_to_write[id] = {}
                     metadata_to_write[id]['analysis_id_triggered'] = test_launch['id']
                     metadata_to_write[id]['run_id'] = run_id
                 ### write pipeline launch metadata (i.e. analysis_id_monitored,analysis_id_triggered) to analyses_launched_table

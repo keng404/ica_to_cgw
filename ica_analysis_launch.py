@@ -93,8 +93,8 @@ def get_project_id(api_key, project_name):
     page_number = 0
     number_of_rows_to_skip = 0
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    #endpoint = f"/api/projects?search={project_name}&includeHiddenProjects=true&pageOffset={pageOffset}&pageSize={pageSize}"
-    endpoint = f"/api/projects"
+    endpoint = f"/api/projects?search={project_name}&includeHiddenProjects=true&pageOffset={pageOffset}&pageSize={pageSize}"
+    #endpoint = f"/api/projects"
     full_url = api_base_url + endpoint	############ create header
     #print(f"FULL_URL: {full_url}")
     headers = CaseInsensitiveDict()
@@ -247,7 +247,7 @@ def list_data(api_key,sample_query,project_id):
     page_number = 0
     number_of_rows_to_skip = 0
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    endpoint = f"/api/projects/{project_id}/data?filePath={sample_query}&filenameMatchMode=FUZZY&filePathMatchMode=STARTS_WITH_CASE_INSENSITIVE&pageOffset={pageOffset}&pageSize={pageSize}"
+    endpoint = f"/api/projects/{project_id}/data?filename={sample_query}&filenameMatchMode=FUZZY&pageOffset={pageOffset}&pageSize={pageSize}"
     full_url = api_base_url + endpoint	############ create header
     headers = CaseInsensitiveDict()
     headers['Accept'] = 'application/vnd.illumina.v3+json'
