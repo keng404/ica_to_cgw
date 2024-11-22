@@ -93,6 +93,15 @@ def get_data(api_key,data_id,project_id):
         return None
     return logging_statement(f"Data lookup for {data_id} and {project_id} completed")
 
+def craft_data_batch(data_ids):
+    batch_object = []
+    for data_id in data_ids:
+        datum_dict = {}
+        datum_dict["dataId"] = data_id
+        batch_object.append(datum_dict)
+    return batch_object
+
+
 def create_data(api_key,project_name, filename, data_type, folder_id=None, format_code=None,filepath=None,project_id=None):
     if project_id is None:
         project_id = get_project_id(api_key, project_name)
@@ -142,7 +151,7 @@ def create_data(api_key,project_name, filename, data_type, folder_id=None, forma
         data_id = data_metadata['data']['id']
     return data_id
 
-def copy_data(api_key,data_to_copy,folder_id,destination_project):
+def copy_data(api_key,data_to_copy_batch,folder_id,destination_project):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
     endpoint = f"/api/projects/{destination_project}/data/dataCopyBatch"
     full_url = api_base_url + endpoint  ############ create header
@@ -151,18 +160,19 @@ def copy_data(api_key,data_to_copy,folder_id,destination_project):
     headers['Content-Type'] = 'application/vnd.illumina.v3+json'
     headers['X-API-Key'] = api_key
     collected_data = {}
-    collected_data['items'] = [{"dataId": data_to_copy}]
+    collected_data['items'] = data_to_copy_batch
     collected_data['destinationFolderId'] =  folder_id
     collected_data['copyUserTags'] = True
     collected_data['copyTechnicalTags'] = True
     collected_data['copyInstrumentInfo'] = True
-    collected_data['actionOnExist'] = 'OVERWRITE'
+    collected_data['actionOnExist'] = 'OVEWRITE'
+    data_to_copy = data_to_copy_batch
     try:
         response = requests.post(full_url, headers = headers,data = json.dumps(collected_data))
-        if response.status_code >= 400:
-            pprint(json.dumps(response.json()), indent=4)
-            raise ValueError(f"Could not copy data: {data_to_copy} to {destination_project}")
     except:
+        raise ValueError(f"Could not copy data: {data_to_copy} to {destination_project}")
+    if response.status_code >= 400:
+        pprint(json.dumps(response.json()), indent=4)
         raise ValueError(f"Could not copy data: {data_to_copy} to {destination_project}")
     copy_details = response.json()
     #pprint(copy_details, indent=4)
@@ -170,7 +180,7 @@ def copy_data(api_key,data_to_copy,folder_id,destination_project):
 
 def copy_batch_status(api_key,batch_id,project_id):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    endpoint = f"/api/projects/{destination_project}/data/dataCopyBatch/{batch_id}"
+    endpoint = f"/api/projects/{destination_project}/dataCopyBatch/{batch_id}"
     full_url = api_base_url + endpoint  ############ create header
     headers = CaseInsensitiveDict()
     headers['Accept'] = 'application/vnd.illumina.v3+json'
@@ -184,34 +194,33 @@ def copy_batch_status(api_key,batch_id,project_id):
     pprint(batch_details, indent=4)
     return batch_details
 
-def link_data(api_key,data_to_link,destination_project):
+def link_data(api_key,data_to_link_batch,destination_project):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    endpoint = f"/api/projects/{destination_project}/data/dataLinkingBatch"
+    endpoint = f"/api/projects/{destination_project}/dataLinkingBatch"
     full_url = api_base_url + endpoint  ############ create header
-    headers = {}
-    headers['accept'] = 'application/vnd.illumina.v3+json'
-    headers['Content-Type'] = 'application/vnd.illumina.v3+json'
+    headers = CaseInsensitiveDict()
+    headers['Accept'] = 'application/vnd.illumina.v4+json'
+    headers['Content-Type'] = 'application/vnd.illumina.v4+json'
     headers['X-API-Key'] = api_key
     collected_data = {}
-    collected_data['items'] = []
-    dtl = {}
-    dtl['dataId'] = data_to_link
-    collected_data['items'].append(dtl)
-    #data = '{"items":[{"dataId": ' + f"'{data_to_link}'" + "}]}'"
+    collected_data['items'] = data_to_link_batch
+    #data = f'{"items":[{"dataId": "{data_to_link}"}]}'
+    data_to_link = data_to_link_batch
     try:
         #response = requests.post(full_url, headers = headers,data = data)
         response = requests.post(full_url, headers = headers,data = json.dumps(collected_data))
-        if response.status_code >= 400:
-            pprint(json.dumps(response.json()), indent=4)
-            raise ValueError(f"Could not link data: {data_to_link} to {destination_project}")
+        #response = requests.post(full_url, headers = headers,json = collected_data)
     except:
+        raise ValueError(f"Could not link data: {data_to_link} to {destination_project}")
+    if response.status_code >= 400:
+        pprint(json.dumps(response.json()), indent=4)
         raise ValueError(f"Could not link data: {data_to_link} to {destination_project}")
     link_details = response.json()
     return link_details
 
 def link_batch_status(api_key,batch_id,project_id):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    endpoint = f"/api/projects/{project_id}/data/dataLinkingBatch/{batch_id}"
+    endpoint = f"/api/projects/{project_id}/dataLinkingBatch/{batch_id}"
     full_url = api_base_url + endpoint  ############ create header
     headers = CaseInsensitiveDict()
     headers['Accept'] = 'application/vnd.illumina.v3+json'
@@ -407,10 +416,12 @@ def main():
                     logging_statement(f"Checking if output folder id: {output_folder_id} is in project {destination_project_id}")
                     folder_exists = get_data(my_api_key,output_folder_id,destination_project_id)
                     if folder_exists is None:
-                        link_batch = link_data(my_api_key,output_folder_id,destination_project_id)
+                        data_link_batch = craft_data_batch([output_folder_id])
+                        print(f"data_link_batch {data_link_batch}")
+                        link_batch = link_data(my_api_key,data_link_batch,destination_project_id)
                         link_batch_id = link_batch['id']
                         batch_status = link_batch_status(my_api_key,link_batch_id,destination_project_id)
-                        while batch_status['status'] != "SUCCEEDED":
+                        while batch_status['job']['status'] != "SUCCEEDED":
                             logging_statement(f"Checking on linking batch job {link_batch_id}")
                             batch_status = link_batch_status(my_api_key,link_batch_id,destination_project_id)
                             time.sleep(3)
@@ -467,16 +478,17 @@ def main():
                     output_folder_id = folder_id 
                     ###### copying data to folder --- this will be folder uploaded to CGW
                     logging_statement(f"Starting uploads to {run_id}")
-                    for dtc in data_to_copy:
-                        copy_batch = copy_data(my_api_key,dtc,folder_id,destination_project_id)
-                        copy_batch_id = copy_batch['id']
+                    data_copy_batch = craft_data_batch(data_to_copy)
+                    print(f"data_copy_batch {data_copy_batch}")
+                    copy_batch = copy_data(my_api_key,data_copy_batch,folder_id,destination_project_id)
+                    copy_batch_id = copy_batch['id']
+                    batch_status = copy_batch_status(my_api_key,copy_batch_id,destination_project_id)
+                    while batch_status['job']['status'] != "SUCCEEDED":
+                        logging_statement(f"Checking on copy batch job {link_batch_id}")
                         batch_status = copy_batch_status(my_api_key,copy_batch_id,destination_project_id)
-                        while batch_status['status'] != "SUCCEEDED":
-                            logging_statement(f"Checking on copy batch job {link_batch_id}")
-                            batch_status = copy_batch_status(my_api_key,copy_batch_id,destination_project_id)
-                            time.sleep(3)
-                        logging_statement(f"Copying completed for {dtc}")
-                    logging_statement(f"Copying completed for {run_id}")
+                        time.sleep(3)
+                    logging_statement(f"Copying completed for {dtc}")
+                logging_statement(f"Copying completed for {run_id}")
                     
                 ### upload manifest file to analysis folder and get data id back from ICA, we'll use this to launch downstream pipeline
                 logging_statement(f"Upload {manifest_file} to ICA")
