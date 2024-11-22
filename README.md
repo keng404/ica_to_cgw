@@ -11,6 +11,7 @@ An orchestration approach to monitor analyses from Illumina Connected Analytics 
 	- API calls and functions to identify a previously run analysis and craft an API template
 - [samplesheet_utils.py](https://github.com/keng404/ica_to_cgw/blob/main/samplesheet_utils.py)
 	- Functions to read and parse v2 samplesheet and craft CGW manifest file
+ 	- Further information can be found in the script above and in [SampleSheet.md](https://github.com/keng404/ica_to_cgw/blob/main/SampleSheet.md)
 - [ica_data_transfer.py](https://github.com/keng404/ica_to_cgw/blob/main/ica_data_transfer.py)
 	- API calls and functions to aid in download and upload to ICA using BOTO3 (i.e. AWS s3)
 ## orchestrators
