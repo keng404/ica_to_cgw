@@ -31,13 +31,16 @@ import re
 import csv
 import boto3
 from botocore.exceptions import ClientError
+import logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename='orchestrator.log', encoding='utf-8', level=logging.INFO)
 ### helper functions
 def logging_statement(string_to_print):
     date_time_obj = dt.now()
     timestamp_str = date_time_obj.strftime("%Y/%b/%d %H:%M:%S:%f")
     #############
     final_str = f"[ {timestamp_str} ] {string_to_print}"
-    return print(f"{final_str}")
+    return logger.info(f"{final_str}")
 ### This function returns data found within first-level of analysis output
 #### to avoid redundant copy jobs
 def get_analysis_output_to_copy(analysis_output,analysis_metadata):
@@ -153,7 +156,7 @@ def create_data(api_key,project_name, filename, data_type, folder_id=None, forma
 
 def copy_data(api_key,data_to_copy_batch,folder_id,destination_project):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
-    endpoint = f"/api/projects/{destination_project}/data/dataCopyBatch"
+    endpoint = f"/api/projects/{destination_project}/dataCopyBatch"
     full_url = api_base_url + endpoint  ############ create header
     headers = CaseInsensitiveDict()
     headers['Accept'] = 'application/vnd.illumina.v3+json'
@@ -165,7 +168,7 @@ def copy_data(api_key,data_to_copy_batch,folder_id,destination_project):
     collected_data['copyUserTags'] = True
     collected_data['copyTechnicalTags'] = True
     collected_data['copyInstrumentInfo'] = True
-    collected_data['actionOnExist'] = 'OVEWRITE'
+    collected_data['actionOnExist'] = 'OVERWRITE'
     data_to_copy = data_to_copy_batch
     try:
         response = requests.post(full_url, headers = headers,data = json.dumps(collected_data))
@@ -178,7 +181,7 @@ def copy_data(api_key,data_to_copy_batch,folder_id,destination_project):
     #pprint(copy_details, indent=4)
     return copy_details
 
-def copy_batch_status(api_key,batch_id,project_id):
+def copy_batch_status(api_key,batch_id,destination_project):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
     endpoint = f"/api/projects/{destination_project}/dataCopyBatch/{batch_id}"
     full_url = api_base_url + endpoint  ############ create header
@@ -189,9 +192,9 @@ def copy_batch_status(api_key,batch_id,project_id):
     try:
         response = requests.get(full_url, headers = headers)
     except:
-        raise ValueError(f"Could not get copy batch status : {batch_id} to {project_id}")
+        raise ValueError(f"Could not get copy batch status : {batch_id} to {destination_project}")
     batch_details = response.json()
-    pprint(batch_details, indent=4)
+    #pprint(batch_details, indent=4)
     return batch_details
 
 def link_data(api_key,data_to_link_batch,destination_project):
@@ -231,7 +234,7 @@ def link_batch_status(api_key,batch_id,project_id):
     except:
         raise ValueError(f"Could not get link batch status : {batch_id} to {project_id}")
     batch_details = response.json()
-    pprint(batch_details, indent=4)
+    ###pprint(batch_details, indent=4)
     return batch_details
 ###################################################
 ### Here SOURCE and DESTINATION project refer to a BSSH-managed project in ICA and downstream project
@@ -386,7 +389,7 @@ def main():
                 data_to_copy = get_analysis_output_to_copy(analysis_output,analysis_metadata)
                 logging_statement(f"Data to copy: {data_to_copy}")
                 
-                ###########
+                ########### pass through result files and folders to identify the SampleSheet and folder of interest
                 search_query_path = "/" + analysis_metadata['reference'] + "/" 
                 output_folder_path = None
                 output_folder_id = None
@@ -395,20 +398,31 @@ def main():
                 samplesheet_path = None
                 for output in analysis_output:
                     path_normalized = output['path'].strip("/$")
+                    path_normalized = path_normalized.strip("^/+")
                     if os.path.basename(path_normalized) == analysis_metadata['reference']:
                         output_folder_id = output['id']
                         output_folder_path = output['path']
                         run_id = analysis_metadata['reference']
                     elif os.path.basename(path_normalized) == "SampleSheet.csv" and re.search("Logs_Intermediates",output['path']) is not None:
-                        logging_statement(f"{output['path']}")
+                        logging_statement(f"Found SampleSheet.csv : {output['path']}")
                         samplesheet_id = output['id']
                         samplesheet_path = output['path']
+                #logging_statement(f"output folder id is: {output_folder_id}")
                 #### Edge-case analysis output_folder_path is not found in analysis_output
                 if output_folder_id is None:
                     folder_query = ica_analysis_monitor.get_analysis_folder(my_api_key,source_project_id,analysis_metadata)
-                    output_folder_id = folder_query[0]['id']
-                    output_folder_path = folder_query[0]['path']
-                    run_id = analysis_metadata['reference']
+                    logging_statement(f"{folder_query}")
+                    for output in folder_query:
+                        path_normalized = output['path'].strip("/$")
+                        path_normalized = path_normalized.strip("^/+")
+                        if os.path.basename(path_normalized) == analysis_metadata['reference']:
+                            output_folder_id = output['id']
+                            output_folder_path = output['path']
+                            run_id = analysis_metadata['reference']
+                if output_folder_id is None:
+                    raise ValueError(f"Could not find output folder")
+                if re.search("^fol",output_folder_id) is None:
+                    raise ValueError(f"Could not accurately identify output folder id for {analysis_metadata}. Found {output_folder_id} instead")
                 logging_statement(f"output folder id is: {output_folder_id}")
 
                 ### if SOURCE ICA PROJECT is not the same as DESTINATION ICA PROJECT, then link the output data
@@ -424,7 +438,7 @@ def main():
                         while batch_status['job']['status'] != "SUCCEEDED":
                             logging_statement(f"Checking on linking batch job {link_batch_id}")
                             batch_status = link_batch_status(my_api_key,link_batch_id,destination_project_id)
-                            time.sleep(3)
+                            time.sleep(5)
                         logging_statement(f"Linking completed for {output_folder_id}")
                             
                 ### Create sample manifest file for CGW and upload to ICA
@@ -484,17 +498,18 @@ def main():
                     copy_batch_id = copy_batch['id']
                     batch_status = copy_batch_status(my_api_key,copy_batch_id,destination_project_id)
                     while batch_status['job']['status'] != "SUCCEEDED":
-                        logging_statement(f"Checking on copy batch job {link_batch_id}")
+                        logging_statement(f"Checking on copy batch job {copy_batch_id}")
                         batch_status = copy_batch_status(my_api_key,copy_batch_id,destination_project_id)
-                        time.sleep(3)
-                    logging_statement(f"Copying completed for {dtc}")
+                        time.sleep(60)
                 logging_statement(f"Copying completed for {run_id}")
                     
                 ### upload manifest file to analysis folder and get data id back from ICA, we'll use this to launch downstream pipeline
                 logging_statement(f"Upload {manifest_file} to ICA")
-                if source_project_id != destination_project_id:
+                # if it's the same project, upload manifest to the analysis_root_folder or 'simplified' analysis_root_folder
+                if source_project_id == destination_project_id:
                     manifest_file_id = create_data(my_api_key,destination_project_name, os.path.basename(manifest_file), "FILE",folder_id=output_folder_id,project_id=destination_project_id)
                 else: 
+                # otherwise, upload to root directory '/' in destination_project_name
                     manifest_file_id = create_data(my_api_key,destination_project_name, os.path.basename(manifest_file), "FILE",filepath="/",project_id=destination_project_id)
                 ### perform actual upload
                 creds = ica_data_transfer.get_temporary_credentials(my_api_key,destination_project_id, manifest_file_id)
