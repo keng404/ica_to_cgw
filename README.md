@@ -18,7 +18,7 @@ An orchestration approach to monitor analyses from Illumina Connected Analytics 
 
 These are custom script(s) based on an end-user's use-case
 
-## [fcs.ICA_to_CGW.orchestrator.py](https://github.com/keng404/ica_to_cgw/blob/main/fcs.ICA_to_CGW.orchestrator.py)
+## [fcs.ICA_to_CGW.orchestrator.py](https://github.com/keng404/ica_to_cgw/blob/main/fcs.ICA_to_CGW.orchestrator.py) Process Outline
 
 1) Monitor TSO500 v2.5.2 analysis
 2) If analysis is running, queued, or in progress
