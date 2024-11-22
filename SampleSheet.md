@@ -1,4 +1,4 @@
-## SampleSheet Assumptions
+## v2 SampleSheet Assumptions
 
 - It is a V2 samplesheet that follows the conventions listed [here](https://support-docs.illumina.com/SW/DRAGEN_TSO500_v2.5/Content/SW/Apps/SampleSheetReqs_fDRAG_mTSO500v2.htm)
 - Additional links of interest are as follows. Note that these are specific instructions for configuring your v2 samplesheet for TSO500 analyses and note other analyses you may be interested in running.
