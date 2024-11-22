@@ -34,6 +34,7 @@ def get_run_name(samplesheet):
         ##logging_statement(f"row {row}")
         if row[0] == "RunName":
             run_name = row[1]
+            break
     if run_name is not None:
         ### replace spaces with '_'
         run_name = re.sub("\\s+","_",run_name)
