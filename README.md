@@ -57,12 +57,15 @@ These are custom script(s) based on an end-user's use-case
 			- With all the ```analysis_id_monitored```,```analysis_id_triggered```, and ```run_id``` we've collected
 
 ## fcs.ICA_to_CGW.orchestrator.py TODO list
+
+- Add in code to pass the CGW manifest file to the CGW upload pipeline in ICA
 - Add bash_wrapper to run orchestrator script every 5/10 minutes
 - Give instructions for setting up Cron job
 - Build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
 - [OPTIONAL] Add data management functionality to remove linked data or duplicate data?? 
 
 ## fcs.ICA_to_CGW.orchestrator.py FAQs
+
 1) How do I generate an API key?
 See this [ICA help page](https://help.ica.illumina.com/get-started/gs-getstarted#api-keys). You can either save during key generation or copy+paste to any text file of your choosing.
 1) What if the pipeline input to ```CGW upload``` changes?
