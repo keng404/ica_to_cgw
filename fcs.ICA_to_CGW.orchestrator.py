@@ -498,7 +498,8 @@ def main():
                     copy_batch_id = copy_batch['id']
                     batch_status = copy_batch_status(my_api_key,copy_batch_id,destination_project_id)
                     while batch_status['job']['status'] != "SUCCEEDED":
-                        logging_statement(f"Checking on copy batch job {copy_batch_id}")
+                        logging_statement(f"Checking on batch id {copy_batch_id}")
+                        logging_statement(f"Checking on copy batch job {copy_batch['job']['id']}")
                         batch_status = copy_batch_status(my_api_key,copy_batch_id,destination_project_id)
                         time.sleep(60)
                 logging_statement(f"Copying completed for {run_id}")
