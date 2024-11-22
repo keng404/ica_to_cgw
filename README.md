@@ -58,11 +58,11 @@ These are custom script(s) based on an end-user's use-case
 
 ## fcs.ICA_to_CGW.orchestrator.py TODO list
 
-- Add in code to pass the CGW manifest file to the CGW upload pipeline in ICA
-- Add bash_wrapper to run orchestrator script every 5/10 minutes
-- Give instructions for setting up Cron job
-- Build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
-- [OPTIONAL] Add data management functionality to remove linked data or duplicate data?? 
+- [ ] Add in code to pass the CGW manifest file to the CGW upload pipeline in ICA
+- [ ] Add bash_wrapper to run orchestrator script every 5/10 minutes
+- [ ] Give instructions for setting up Cron job
+- [ ] Build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
+- [ ] [OPTIONAL] Add data management functionality to remove linked data or duplicate data?? 
 
 ## fcs.ICA_to_CGW.orchestrator.py FAQs
 
