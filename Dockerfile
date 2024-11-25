@@ -7,7 +7,7 @@ RUN pip3 install -r /opt/requirements.txt
 
 # copy python and bash wrapper
 COPY *py ${WORKDIR}/
-##  COPY *sh ${WORKDIR}/
+COPY fcs_orchestration_wrapper.sh ${WORKDIR}/
 
 ### add some dev tools
 RUN apt-get update -y && \

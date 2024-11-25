@@ -34,6 +34,7 @@ from botocore.exceptions import ClientError
 import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='orchestrator.log', encoding='utf-8', level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler())
 ### helper functions
 def logging_statement(string_to_print):
     date_time_obj = dt.now()
