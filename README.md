@@ -15,7 +15,7 @@ An orchestration approach to monitor analyses from Illumina Connected Analytics 
 - [ica_data_transfer.py](https://github.com/keng404/ica_to_cgw/blob/main/ica_data_transfer.py)
 	- API calls and functions to aid in download and upload to ICA using BOTO3 (i.e. AWS s3)
 
-## orhestrator wrappers
+## orchestrator wrappers
 
 These are scripts or cron jobs that invoke the orchestrator scripts at a cadence (default. every 10 minutes) that can be configured.
 
