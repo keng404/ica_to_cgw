@@ -507,8 +507,8 @@ def main():
                     
                 ### upload manifest file to analysis folder and get data id back from ICA, we'll use this to launch downstream pipeline
                 logging_statement(f"Upload {manifest_file} to ICA")
-                # if it's the same project, upload manifest to the analysis_root_folder or 'simplified' analysis_root_folder
-                if source_project_id == destination_project_id:
+                #  upload manifest to the analysis_root_folder or 'simplified' analysis_root_folder
+                if len([x for x in analysis_metadata['reference']]) > args.cgw_folder_character_limit:
                     manifest_file_id = create_data(my_api_key,destination_project_name, os.path.basename(manifest_file), "FILE",folder_id=output_folder_id,project_id=destination_project_id)
                 else: 
                 # otherwise, upload to root directory '/' in destination_project_name
