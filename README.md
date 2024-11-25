@@ -17,7 +17,9 @@ An orchestration approach to monitor analyses from Illumina Connected Analytics 
 
 ## orhestrator wrappers
 
-These are scripts or cron jobs that invoke the orchestrator scripts at a cadence (default. every 10 minutes) that can be configured
+These are scripts or cron jobs that invoke the orchestrator scripts at a cadence (default. every 10 minutes) that can be configured.
+
+Some guidance on setting up a cron job can be found on this [page](https://www.redhat.com/en/blog/linux-cron-command)
 
 ### example
 - [fcs_orchestration_wrapper.sh](https://github.com/keng404/ica_to_cgw/blob/main/fcs_orchestration_wrapper.sh)
@@ -70,9 +72,9 @@ These are custom script(s) based on an end-user's use-case
 ## fcs.ICA_to_CGW.orchestrator.py TODO list
 
 - [ ] Add in code to pass the CGW manifest file to the CGW upload pipeline in ICA
-- [ ] Add bash_wrapper to run orchestrator script every 5/10 minutes
-- [ ] Give instructions for setting up Cron job
-- [ ] Build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
+- [X] Add bash_wrapper to run orchestrator script every 5/10 minutes
+- [X] Give instructions for setting up Cron job
+- [X] Build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/ica_to_cgw/blob/main/Dockerfile)
 - [ ] [OPTIONAL] Add data management functionality to remove linked data or duplicate data?? 
 
 ## fcs.ICA_to_CGW.orchestrator.py FAQs
