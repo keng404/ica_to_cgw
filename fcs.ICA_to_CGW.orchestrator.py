@@ -298,20 +298,14 @@ def main():
     if source_project_id is None:
         raise ValueError("Need to provide project name or project id")
     
-    if pipeline_name_to_monitor is None:
-        raise ValueError("Need to provide pipeline name to monitor")
-    else:
-        if pipeline_name_to_monitor_id is None:
-            logging_statement("Grabbing ID for pipeline to monitor")
-            pipeline_name_to_monitor_id = ica_analysis_launch.get_pipeline_id(pipeline_name_to_monitor,my_api_key,source_project_name,project_id=source_project_id)
-        logging_statement(f"{pipeline_name_to_monitor} : {pipeline_name_to_monitor_id} ")
-    if pipeline_name_to_trigger is None:
-        raise ValueError("Need to provide pipeline name to trigger")
-    else:
-        if pipeline_name_to_trigger_id is None:
-            logging_statement("Grabbing ID for pipeline to trigger")
-            pipeline_name_to_trigger_id = ica_analysis_launch.get_pipeline_id(pipeline_name_to_trigger,my_api_key,destination_project_name,project_id=destination_project_id)
-        logging_statement(f"{pipeline_name_to_trigger} : {pipeline_name_to_trigger_id} ")
+    if pipeline_name_to_monitor_id is None:
+        logging_statement("Grabbing ID for pipeline to monitor")
+        pipeline_name_to_monitor_id = ica_analysis_launch.get_pipeline_id(pipeline_name_to_monitor,my_api_key,source_project_name,project_id=source_project_id)
+    logging_statement(f"{pipeline_name_to_monitor} : {pipeline_name_to_monitor_id} ")
+    if pipeline_name_to_trigger_id is None:
+        logging_statement("Grabbing ID for pipeline to trigger")
+        pipeline_name_to_trigger_id = ica_analysis_launch.get_pipeline_id(pipeline_name_to_trigger,my_api_key,destination_project_name,project_id=destination_project_id)
+    logging_statement(f"{pipeline_name_to_trigger} : {pipeline_name_to_trigger_id} ")
 
     ####### now let's set up pipeline analysis by updating the template
     
