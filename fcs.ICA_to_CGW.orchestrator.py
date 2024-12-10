@@ -250,6 +250,8 @@ def main():
     parser.add_argument('--destination_project_name',default=None, type=str, help="DESTINATION ICA project name")
     parser.add_argument('--pipeline_name_to_monitor',default=None, type=str, help="Pipeline name to monitor")
     parser.add_argument('--pipeline_name_to_trigger',default=None, type=str, help="Pipeline name to trigger")
+    parser.add_argument('--pipeline_name_to_monitor_id',default=None, type=str, help="Pipeline id to monitor")
+    parser.add_argument('--pipeline_name_to_trigger_id',default=None, type=str, help="Pipeline id to trigger")
     parser.add_argument('--cgw_folder_character_limit',default=150, type=int, help="CGW Character limit of Run Folder Name")
     parser.add_argument('--analyses_monitored_file', default='analyses_monitored_file.txt', type=str, help="ICA analysis id")
     parser.add_argument('--analyses_launched_table', default='analyses_launched_table.txt', type=str, help="ICA analysis name --- analysis user reference")
@@ -265,6 +267,8 @@ def main():
     destination_project_name = args.destination_project_name
     pipeline_name_to_monitor = args.pipeline_name_to_monitor
     pipeline_name_to_trigger = args.pipeline_name_to_trigger
+    pipeline_name_to_monitor_id = args.pipeline_name_to_monitor_id
+    pipeline_name_to_trigger_id = args.pipeline_name_to_trigger_id
     analyses_monitored_file = args.analyses_monitored_file
     analyses_launched_table = args.analyses_launched_table
     storage_size = args.storage_size
@@ -297,14 +301,16 @@ def main():
     if pipeline_name_to_monitor is None:
         raise ValueError("Need to provide pipeline name to monitor")
     else:
-        logging_statement("Grabbing ID for pipeline to monitor")
-        pipeline_name_to_monitor_id = ica_analysis_launch.get_pipeline_id(pipeline_name_to_monitor,my_api_key,source_project_name,project_id=source_project_id)
+        if pipeline_name_to_monitor_id is None:
+            logging_statement("Grabbing ID for pipeline to monitor")
+            pipeline_name_to_monitor_id = ica_analysis_launch.get_pipeline_id(pipeline_name_to_monitor,my_api_key,source_project_name,project_id=source_project_id)
         logging_statement(f"{pipeline_name_to_monitor} : {pipeline_name_to_monitor_id} ")
     if pipeline_name_to_trigger is None:
         raise ValueError("Need to provide pipeline name to trigger")
     else:
-        logging_statement("Grabbing ID for pipeline to trigger")
-        pipeline_name_to_trigger_id = ica_analysis_launch.get_pipeline_id(pipeline_name_to_trigger,my_api_key,destination_project_name,project_id=destination_project_id)
+        if pipeline_name_to_trigger_id is None:
+            logging_statement("Grabbing ID for pipeline to trigger")
+            pipeline_name_to_trigger_id = ica_analysis_launch.get_pipeline_id(pipeline_name_to_trigger,my_api_key,destination_project_name,project_id=destination_project_id)
         logging_statement(f"{pipeline_name_to_trigger} : {pipeline_name_to_trigger_id} ")
 
     ####### now let's set up pipeline analysis by updating the template
