@@ -348,7 +348,7 @@ def get_input_template(pipeline_code, api_key,project_name, fixed_input_data_fie
         # find most recent analysis_id for the pipeline_code that succeeeded
         analyses_dict = {}
         for analysis_idx,analysis in enumerate(project_analyses):
-            if analysis['pipeline']['code'] == pipeline_code and analysis['status'] == "SUCCEEDED":
+            if (analysis['pipeline']['code'] == pipeline_code or analysis['pipeline']['id'] == pipeline_code) and analysis['status'] == "SUCCEEDED":
                 analyses_dict[analysis['endDate']] = analysis
         
         sorted_keys = sorted(analyses_dict.keys())
