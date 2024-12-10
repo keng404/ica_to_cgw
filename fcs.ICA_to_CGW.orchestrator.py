@@ -408,6 +408,7 @@ def main():
                         logging_statement(f"Found SampleSheet.csv : {output['path']}")
                         samplesheet_id = output['id']
                         samplesheet_path = output['path']
+
                 #logging_statement(f"output folder id is: {output_folder_id}")
                 #### Edge-case analysis output_folder_path is not found in analysis_output
                 if output_folder_id is None:
@@ -445,8 +446,9 @@ def main():
                 ### Create sample manifest file for CGW and upload to ICA
                 #### download samplesheet 
                 ########## Error out if no samplesheet is found instead of moving on to next analysis?
+     
                 if samplesheet_id is None:
-                    raise ValueError(f"Could not find SampleSheet.csv in {output_folder_path}")
+                     raise ValueError(f"Could not find SampleSheet.csv in {output_folder_path}")
                 ############################
                 samplesheet_local_path = os.path.join(os.getcwd(),os.path.basename(samplesheet_path))
                 logging_statement(f"Downloading SampleSheet locally")
