@@ -106,7 +106,7 @@ python fcs.ICA_to_CGW.orchestrator.py --api_key_file /opt/api_key.txt --source_p
 
 or
 
-python fcs.ICA_to_CGW.orchestrator.py --api_key_file /opt/api_key.txt --source_project_name ken_debug --pipeline_name_to_monitor_id '<PIPELINE_ID_1>' --pipeline_name_to_trigger '<PIPELINE_ID_2>' --api_template_file /Users/keng/ica_to_cgw/test.json
+python fcs.ICA_to_CGW.orchestrator.py --api_key_file /opt/api_key.txt --source_project_name ken_debug --pipeline_name_to_monitor_id '<PIPELINE_ID_1>' --pipeline_name_to_trigger_id '<PIPELINE_ID_2>' --api_template_file /Users/keng/ica_to_cgw/test.json
 
 # TEST2 : analysis you monitor and trigger will be in the different ICA projects
 python fcs.ICA_to_CGW.orchestrator.py --api_key_file /opt/api_key.txt --source_project_name ken_debug --destination_project_name Ken_demos  --pipeline_name_to_monitor 'DRAGEN Somatic Enrichment 4-3-6 Clone' --pipeline_name_to_trigger 'DRAGEN_REPORTS_STANDALONE_CUSTOM_v2'
