@@ -51,7 +51,7 @@ These are custom script(s) based on an end-user's use-case
         			- If this ```RunName``` is identified, then the new ```run_id``` will be "{RunName}_DRAGEN-R2-{EPOCH_TIME}"
         			- ```EPOCH_TIME``` is the UNIX time in seconds	 		
 	- If analysis is not in the triggered analysis table
-		- Download v2 samplesheet of belonging to the TSO500 v2.5.2 analysis results
+		- Download v2 samplesheet of belonging to the input to TSO500 v2.5.2 analysis 
   		- If your TSO500 analysis is in a BaseSpace-managed project in ICA
 		    - The analysis is linked into a different project where your CGW upload pipeline exists
 		    - Data link is monitored and reported out to screen

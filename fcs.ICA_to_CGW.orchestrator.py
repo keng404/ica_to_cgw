@@ -97,6 +97,27 @@ def get_data(api_key,data_id,project_id):
         return None
     return logging_statement(f"Data lookup for {data_id} and {project_id} completed")
 
+def get_data_metadata(api_key,data_id,project_id):
+    api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
+    endpoint = f"/api/projects/{project_id}/data/{data_id}"
+    full_url = api_base_url + endpoint  ############ create header
+    headers = CaseInsensitiveDict()
+    headers['Accept'] = 'application/vnd.illumina.v3+json'
+    headers['Content-Type'] = 'application/vnd.illumina.v3+json'
+    headers['X-API-Key'] = api_key
+    try:
+        response = requests.get(full_url, headers=headers)
+    except:
+        logging_statement(f"data {data_id} not found in project {project_id}")
+        return None
+    data_metadata = response.json()
+    #pprint(data_metadata,indent=4)
+    if 'data' in data_metadata.keys():
+        return data_metadata['data']
+    else:
+        return None
+    return logging_statement(f"Data lookup for {data_id} and {project_id} completed")
+
 def craft_data_batch(data_ids):
     batch_object = []
     for data_id in data_ids:
@@ -255,6 +276,8 @@ def get_data_id(api_key,file_path,project_id):
     if data_id is None:
         raise ValueError(f"Cannot find data {file_path} in the project {project_id}")
     return data_id
+
+                    
 ###################################################
 ### Here SOURCE and DESTINATION project refer to a BSSH-managed project in ICA and downstream project
 ### This is in the case where you are using ICA autolaunch but a custom pipeline run in a different ICA project
@@ -389,23 +412,24 @@ def main():
         #### samplesheet overrides
         samplesheet_overrides = {}
         samplesheet_overrides_manifest_data = []
-        if os.path.exists(samplesheet_overrides_manifest) is True:
-            logging_statement(f"STEP3A: Obtaining samplesheet overrides")
-            logging_statement(f"Reading in previous analyses monitored from {samplesheet_overrides_manifest}")
-            #### format is analysis_id_monitored,samplesheet_path,samplesheet_id
-            with open(samplesheet_overrides_manifest) as csv_file:
-                csv_reader = csv.reader(csv_file, delimiter=',')
-                for row in csv_reader:
-                   samplesheet_overrides_manifest_data.append(row)
-        if len(samplesheet_overrides_manifest_data) > 0:
-            header_dict = dict()
-            for line in samplesheet_overrides_manifest_data:
-                if "analysis_id_monitored" in line:
-                    for idx,val in enumerate(line):
-                        header_dict[val] = idx
-                if "analysis_id_monitored" in list(header_dict.keys()):
-                    if line[header_dict["analysis_id_monitored"]] != "analysis_id_monitored":
-                        samplesheet_overrides[line[header_dict["analysis_id_monitored"]]] = line[header_dict["samplesheet_path"]]
+        if samplesheet_overrides_manifest is not None:
+            if os.path.exists(samplesheet_overrides_manifest) is True:
+                logging_statement(f"STEP3A: Obtaining samplesheet overrides")
+                logging_statement(f"Reading in previous analyses monitored from {samplesheet_overrides_manifest}")
+                #### format is analysis_id_monitored,samplesheet_path,samplesheet_id
+                with open(samplesheet_overrides_manifest) as csv_file:
+                    csv_reader = csv.reader(csv_file, delimiter=',')
+                    for row in csv_reader:
+                        samplesheet_overrides_manifest_data.append(row)
+            if len(samplesheet_overrides_manifest_data) > 0:
+                header_dict = dict()
+                for line in samplesheet_overrides_manifest_data:
+                    if "analysis_id_monitored" in line:
+                        for idx,val in enumerate(line):
+                            header_dict[val] = idx
+                    if "analysis_id_monitored" in list(header_dict.keys()):
+                        if line[header_dict["analysis_id_monitored"]] != "analysis_id_monitored":
+                            samplesheet_overrides[line[header_dict["analysis_id_monitored"]]] = line[header_dict["samplesheet_path"]]
 
         ### if analysis id is already associated with a 'downstream' analysis (after looking it up in the analyses_launched_table), don't run trigger the downsream analysis
         logging_statement(f"Finalize list of analyses to trigger")
@@ -436,8 +460,37 @@ def main():
                 output_folder_path = None
                 output_folder_id = None
                 run_id = None
+                ### get samplesheet id and path
                 samplesheet_id = None
                 samplesheet_path = None
+                input_data_fields_to_keep  = []
+                param_fields_to_keep = []
+                if pipeline_name_to_monitor is not None:
+                    job_templates = ica_analysis_launch.get_input_template(pipeline_name_to_monitor, my_api_key,source_project_name,input_data_fields_to_keep, param_fields_to_keep,analysis_id=id,project_id=source_project_id)
+                else:
+                    job_templates = ica_analysis_launch.get_input_template(pipeline_id_to_monitor, my_api_key,source_project_name,input_data_fields_to_keep, param_fields_to_keep,analysis_id=id,project_id=source_project_id)
+                my_params = job_templates['parameter_settings']
+                my_data_inputs = job_templates['input_data']
+                ### get samplesheet_id and samplesheet_path from completed run directly from run analysis
+                for idx,data_input in enumerate(my_data_inputs):
+                    if data_input['parameter_code'] == "sample_sheet" or data_input['parameter_code'] == "samplesheet" :
+                        if len(data_input['data_ids']) > 0:
+                            samplesheet_id = data_input['data_ids'][0]
+                            samplesheet_metadata = get_data_metadata(my_api_key,samplesheet_id,source_project_id)
+                            samplesheet_path = samplesheet_metadata['details']['path']
+                ### get samplesheet_id and samplesheet_path from completed run inferred from the input run folder
+                if samplesheet_id is None:
+                    for idx,data_input in enumerate(my_data_inputs):
+                        if data_input['parameter_code'] == "run_folder" or data_input['parameter_code'] == "runfolder" :
+                            run_folder_id = data_input['data_ids'][0]
+                            run_folder_metadata = get_data_metadata(my_api_key,run_folder_id,source_project_id)
+                            run_folder_path = run_folder_metadata['details']['path']
+                            samplesheet_path = run_folder_path + "SampleSheet.csv"
+                            samplesheet_id = get_data_id(my_api_key,samplesheet_path,destination_project_id)
+                if samplesheet_id is None:
+                     raise ValueError(f"Could not find SampleSheet.csv in {output_folder_path}")
+                logging_statement(f"Found SampleSheet Path: {samplesheet_path}, ID: {samplesheet_id}")
+                ########################
                 for output in analysis_output:
                     path_normalized = output['path'].strip("/$")
                     path_normalized = path_normalized.strip("^/+")
@@ -445,10 +498,10 @@ def main():
                         output_folder_id = output['id']
                         output_folder_path = output['path']
                         run_id = analysis_metadata['reference']
-                    elif os.path.basename(path_normalized) == "SampleSheet.csv" and re.search("Logs_Intermediates",output['path']) is not None:
-                        logging_statement(f"Found SampleSheet.csv : {output['path']}")
-                        samplesheet_id = output['id']
-                        samplesheet_path = output['path']
+                    #elif os.path.basename(path_normalized) == "SampleSheet.csv" and re.search("Logs_Intermediates",output['path']) is not None:
+                    #    logging_statement(f"Found SampleSheet.csv : {output['path']}")
+                    #    samplesheet_id = output['id']
+                    #    samplesheet_path = output['path']
 
                 #logging_statement(f"output folder id is: {output_folder_id}")
                 #### Edge-case analysis output_folder_path is not found in analysis_output
@@ -488,8 +541,6 @@ def main():
                 #### download samplesheet 
                 ########## Error out if no samplesheet is found instead of moving on to next analysis?
      
-                if samplesheet_id is None:
-                     raise ValueError(f"Could not find SampleSheet.csv in {output_folder_path}")
                 if id in list(samplesheet_overrides.keys()):
                     logging_statement(f"Using samplesheet override value {samplesheet_overrides[id]}")
                     samplesheet_path = samplesheet_overrides[id]
