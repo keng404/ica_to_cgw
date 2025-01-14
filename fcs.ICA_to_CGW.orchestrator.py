@@ -237,6 +237,24 @@ def link_batch_status(api_key,batch_id,project_id):
     batch_details = response.json()
     ###pprint(batch_details, indent=4)
     return batch_details
+######
+def get_data_id(api_key,file_path,project_id):
+    filename = os.path.basename(file_path)
+    datum_metadata = ica_analysis_launch.list_data(api_key,filename,project_id)
+    data_id = None
+    if len(datum_metadata) > 0:
+        for idx,data_metadata in enumerate(datum_metadata):
+            if 'data' not in data_metadata.keys():
+                if data_metadata['path'] == file_path:
+                    data_id = data_metadata['id']
+            else:
+                if data_metadata['data']['path'] == file_path:
+                    data_id = data_metadata['data']['id']
+    else:
+        raise ValueError(f"Cannot find data {filename} in the project {project_id}")
+    if data_id is None:
+        raise ValueError(f"Cannot find data {file_path} in the project {project_id}")
+    return data_id
 ###################################################
 ### Here SOURCE and DESTINATION project refer to a BSSH-managed project in ICA and downstream project
 ### This is in the case where you are using ICA autolaunch but a custom pipeline run in a different ICA project
@@ -255,6 +273,7 @@ def main():
     parser.add_argument('--cgw_folder_character_limit',default=150, type=int, help="CGW Character limit of Run Folder Name")
     parser.add_argument('--analyses_monitored_file', default='analyses_monitored_file.txt', type=str, help="ICA analysis id")
     parser.add_argument('--analyses_launched_table', default='analyses_launched_table.txt', type=str, help="ICA analysis name --- analysis user reference")
+    parser.add_argument('--samplesheet_overrides_manifest',default=None, type=str, help="Path to Samplesheet overrides file")
     parser.add_argument('--api_key_file', default=None, type=str, help="file that contains API-Key")
     parser.add_argument('--api_template_file', default=None, type=str, help="file that contains API template for launching analysis for pipeline")
     parser.add_argument('--server_url', default='https://ica.illumina.com', type=str, help="ICA base URL")
@@ -271,6 +290,7 @@ def main():
     pipeline_id_to_trigger = args.pipeline_id_to_trigger
     analyses_monitored_file = args.analyses_monitored_file
     analyses_launched_table = args.analyses_launched_table
+    samplesheet_overrides_manifest = args.samplesheet_overrides_manifest
     storage_size = args.storage_size
     os.environ['ICA_BASE_URL'] = args.server_url
     ###### read in api key file
@@ -356,7 +376,7 @@ def main():
         analyses_launched_table_data = []
         if os.path.exists(analyses_launched_table) is True:
             logging_statement(f"Reading in previous analyses monitored from {analyses_launched_table}")
-            #### format is analysis_id_monitored,analysis_id_triggered
+            #### format is analysis_id_monitored,analysis_id_triggered,run_id
             with open(analyses_launched_table) as csv_file:
                 csv_reader = csv.reader(csv_file, delimiter=',')
                 for row in csv_reader:
@@ -365,6 +385,27 @@ def main():
             for line in analyses_launched_table_data:
                 if line[0] != "analysis_id_monitored":
                     analysis_ids_previously_triggered[line[0]] = line[1]
+
+        #### samplesheet overrides
+        samplesheet_overrides = {}
+        samplesheet_overrides_manifest_data = []
+        if os.path.exists(samplesheet_overrides_manifest) is True:
+            logging_statement(f"STEP3A: Obtaining samplesheet overrides")
+            logging_statement(f"Reading in previous analyses monitored from {samplesheet_overrides_manifest}")
+            #### format is analysis_id_monitored,samplesheet_path,samplesheet_id
+            with open(samplesheet_overrides_manifest) as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=',')
+                for row in csv_reader:
+                   samplesheet_overrides_manifest_data.append(row)
+        if len(samplesheet_overrides_manifest_data) > 0:
+            header_dict = dict()
+            for line in samplesheet_overrides_manifest_data:
+                if "analysis_id_monitored" in line:
+                    for idx,val in enumerate(line):
+                        header_dict[val] = idx
+                if "analysis_id_monitored" in list(header_dict.keys()):
+                    if line[header_dict["analysis_id_monitored"]] != "analysis_id_monitored":
+                        samplesheet_overrides[line[header_dict["analysis_id_monitored"]]] = line[header_dict["samplesheet_path"]]
 
         ### if analysis id is already associated with a 'downstream' analysis (after looking it up in the analyses_launched_table), don't run trigger the downsream analysis
         logging_statement(f"Finalize list of analyses to trigger")
@@ -449,6 +490,10 @@ def main():
      
                 if samplesheet_id is None:
                      raise ValueError(f"Could not find SampleSheet.csv in {output_folder_path}")
+                if id in list(samplesheet_overrides.keys()):
+                    logging_statement(f"Using samplesheet override value {samplesheet_overrides[id]}")
+                    samplesheet_path = samplesheet_overrides[id]
+                    samplesheet_id = get_data_id(my_api_key,samplesheet_path,destination_project_id)
                 ############################
                 samplesheet_local_path = os.path.join(os.getcwd(),os.path.basename(samplesheet_path))
                 logging_statement(f"Downloading SampleSheet locally")
@@ -556,8 +601,12 @@ def main():
                 my_storage_analysis_id = ica_analysis_launch.get_analysis_storage_id(my_api_key, storage_size)
                 #### TODO: custom code to override data inputs
                 for idx,data_input in enumerate(my_data_inputs):
-                    if data_input['parameter_code'] == "input_folders":
+                    if data_input['parameter_code'] == "runFolder":
                         data_input['data_ids'] = [output_folder_id]
+                    if data_input['parameter_code'] == "mappingFile":
+                        data_input['data_ids'] = [manifest_file_id]
+                    if data_input['parameter_code'] == "sampleSheet":
+                        data_input['data_ids'] = [samplesheet_id]
                     #if data_input['parameter_code'] == "manifest_file":
                     #    data_input['data_ids'] = [manifest_file_id]
                 #####################################

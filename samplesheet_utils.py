@@ -233,6 +233,8 @@ def CGW_sample_manifest_runner(folder_basename,v2_samplesheet,output_manifest=No
 
     logging_statement(f"STEP2: Parse V2 data from {v2_samplesheet}")
     v2_samplesheet_parsed = parse_tso_v2_samplesheet(v2_samplesheet_data)
+    if len(v2_samplesheet_parsed['header_dict']) < 1:
+        raise ValueError(f"Could not find TSO data section in {v2_samplesheet}")
     bclconvert_samplesheet_parsed = bclconvert_from_v2_samplesheet(v2_samplesheet_data)
 
     logging_statement(f"STEP3: Create CGW manifest for {folder_basename}")

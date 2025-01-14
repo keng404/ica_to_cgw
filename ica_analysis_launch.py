@@ -260,7 +260,7 @@ def list_data(api_key,sample_query,project_id):
             while page_number*pageSize <  totalRecords:
                 projectDataPagedList = requests.get(full_url, headers=headers)
                 for projectData in projectDataPagedList.json()['items']:
-                        datum.append({"name":projectData['data']['details']['name'],"id":projectData['data']['id']})
+                        datum.append({"name":projectData['data']['details']['name'],"id":projectData['data']['id'],"path":projectData['data']['details']['path']})
                 page_number += 1
                 number_of_rows_to_skip = page_number * pageSize
     except:
