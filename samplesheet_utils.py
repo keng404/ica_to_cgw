@@ -127,7 +127,7 @@ def get_header_dict(header_array):
 # PAIR ID is PAIR ID 
 ###############################
 def get_hard_coded_values(row,header_dict):
-    row[header_dict['LANE']] = '1'
+    ##row[header_dict['LANE']] = '1'
     row[header_dict['SPECIMEN LABEL']] = 'Primary Specimen'
     row[header_dict['SEQUENCING TYPE']] = 'PAIRED END'
     return row
