@@ -19,3 +19,20 @@ Please refer to help documentation for examples and guidance on v2 samplesheets 
 - ```SAMPLE TYPE``` is ```Sample_Type```
 - ```SAMPLE ID``` is ```Sample_ID```
 - ```PAIR ID``` is ```PAIR ID```  
+
+
+### SampleSheet v2 TSO Data header assumption
+
+- ```ACCESSION_NUMBER``` and ```SPECIMEN_LABEL``` fields are present in the TSO Data section of the v2 samplesheet
+- If these headers are not found, the script will look for headers that match the following:
+  - ```ACCESSION_NUMBER```  will match to ```ACCESSION NUMBER```, ```ACCESSION_NUMBER```, ```ACCESSION-NUMBER```
+  - ```SPECIMEN_LABEL``` will match to ```SPECIMEN LABEL```, ```SPECIMEN_LABEL```, ```SPECIMEN-LABEL```
+- Additionally the parser will match ignoring lower or upper casing of the headers
+
+## The following TSO Data headers are examples of valid headers
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,SPECIMEN_LABEL```
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,***SPECIMEN LABEL***```
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,***ACCESSION NUMBER***,SPECIMEN_LABEL```
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,***ACCESSION-NUMBER***,SPECIMEN_LABEL```
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,***SPECIMEN-LABEL***```
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,***SPECIMEN_LABEl***```

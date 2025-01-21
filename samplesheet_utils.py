@@ -113,7 +113,29 @@ def get_header_dict(header_array):
     header_dict = {}
     for idx,field in enumerate(header_array):
         header_dict[field] = idx
-    return header_dict      
+    return header_dict 
+
+HEADERS_WITH_ALIASES = ["ACCESSION NUMBER","SPECIMEN LABEL"]
+def get_header_aliases(parsed_dict):
+    alias_dict = dict()
+    ### set default aliases as identical to the headers names we are looking for
+    for header_check in  HEADERS_WITH_ALIASES:
+        alias_dict[header_check] = header_check
+    parsed_dict_headers = list(parsed_dict.keys())
+    for header in parsed_dict_headers:
+        ### remove "-" and "_" in names
+        header_updated = re.sub("-"," ",header)
+        header_updated = re.sub("_"," ",header_updated)
+        ### remove whitespace
+        header_updated = header_updated.strip()
+         #### be lenient on casing
+        header_updated = header_updated.upper()
+        #print(f"header_updated : {header_updated}")
+        for header_check in HEADERS_WITH_ALIASES:
+            if header_updated == header_check:
+                #print(f"Found alias for {header_check} : {header}")
+                alias_dict[header_check] = header
+    return alias_dict
 ##########################################
 ## CGW manifest notes
 # assume LANE is always '1'
@@ -127,8 +149,9 @@ def get_header_dict(header_array):
 # PAIR ID is PAIR ID 
 ###############################
 def get_hard_coded_values(row,header_dict):
-    ##row[header_dict['LANE']] = '1'
-    row[header_dict['SPECIMEN LABEL']] = 'Primary Specimen'
+    alias_dict = get_header_aliases(header_dict)
+    row[header_dict['LANE']] = '1'
+    row[header_dict[alias_dict['SPECIMEN LABEL']]] = 'Primary Specimen'
     row[header_dict['SEQUENCING TYPE']] = 'PAIRED END'
     return row
 def update_run_id(row,header_dict,run_folder_basename):
@@ -156,29 +179,31 @@ def update_barcode(row,header_dict,parsed_row,parsed_dict):
             row[header_dict['SEQUENCING TYPE']] = 'SINGLE END'
     return row
 def update_parsed(row,header_dict,parsed_row,parsed_dict):
+    alias_dict = get_header_aliases(parsed_dict)
+    #print(f"header aliases : {alias_dict}")
     row_parsed_mapping = {}
-    row_parsed_mapping["ACCESSION NUMBER"] = "ACCESSION_NUMBER"
-    row_parsed_mapping["SPECIMEN LABEL"] = "SPECIMEN_LABEL"
+    row_parsed_mapping["ACCESSION NUMBER"] = alias_dict["ACCESSION NUMBER"]
+    row_parsed_mapping["SPECIMEN LABEL"] = alias_dict["SPECIMEN LABEL"]
     row_parsed_mapping["SAMPLE TYPE"] = "Sample_Type"
     row_parsed_mapping["SAMPLE ID"] = "Sample_ID"
     row_parsed_mapping["PAIR ID"] = "Pair_ID"
     ######## check parsed_dict object before performing update
     fields_not_found  = []
-    for k,v in enumerate(row_parsed_mapping):
+    for idx,v in enumerate(list(row_parsed_mapping.keys())):
         lookup_key = row_parsed_mapping[v]
         if lookup_key not in list(parsed_dict.keys()):
             fields_not_found.append(lookup_key)
     if len(fields_not_found) > 0:
        fields_not_found_str = ",".join(fields_not_found)
-       raise ValueError(f"Could not find {fields_not_found_str} in the TSO Data section of your samplesheet\nPlease check your samplesheet")
+       logging_statement(f"[WARNING]: Could not find {fields_not_found_str} in the TSO Data section of your samplesheet\nPlease check your samplesheet")
     #############
     for k,v in enumerate(row_parsed_mapping):
         lookup_key = row_parsed_mapping[v]
-        if lookup_key in list(parsed_dict.keys()):
-            row[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
-        else:
-            debug_string = ",".join(parsed_row)
-            raise ValueError(f"Could not find value for {lookup_key} in {debug_string}")
+        #if lookup_key in list(parsed_dict.keys()):
+        row[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
+        #else:
+        #    debug_string = ",".join(parsed_row)
+        #    raise ValueError(f"Could not find value for {lookup_key} in {debug_string}")
     return row
 
 def get_updated_row(CGW_header_dict,parsed_row,parsed_dict,secondary_row,secondary_dict):
@@ -200,6 +225,8 @@ def generate_CGW_sample_manifest(folder_basename,parsed_object,secondary_parsed_
     parsed_dict = parsed_object['header_dict']
     secondary_dict = secondary_parsed_object['header_dict']
     print(f"Header Fields of your samplesheet's TSO500 Data section : parsed dict {parsed_dict}")
+    alias_dict = get_header_aliases(parsed_dict)
+    print(f"header aliases : {alias_dict}")
     sample_info = parsed_object['sample_info']
     bclconvert_sample_info = secondary_parsed_object['sample_info']
     ### for each sample row info we parsed from the v2 samplesheet

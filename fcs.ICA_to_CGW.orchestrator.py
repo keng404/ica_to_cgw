@@ -300,6 +300,7 @@ def main():
     parser.add_argument('--api_key_file', default=None, type=str, help="file that contains API-Key")
     parser.add_argument('--api_template_file', default=None, type=str, help="file that contains API template for launching analysis for pipeline")
     parser.add_argument('--server_url', default='https://ica.illumina.com', type=str, help="ICA base URL")
+    parser.add_argument('--dry_run', action="store_true",default=False, help="run script in dry run mode --- no analyses will be launched, but full script will be run")
     parser.add_argument('--storage_size', default="Large",const='Large',nargs='?', choices=("Small","Medium","Large","XLarge","2XLarge","3XLarge"), type=str, help="Storage disk size used for job [OPTIONAL].\nSee https://help.ica.illumina.com/reference/r-pricing#compute for more details.\n")
     args, extras = parser.parse_known_args()
     #############
@@ -662,12 +663,16 @@ def main():
                     #    data_input['data_ids'] = [manifest_file_id]
                 #####################################
                 ### launch downstream pipeline and collect id of launched analysis
-                logging_statement(f"Launching downstream analysis for {pipeline_run_name}")
-                test_launch = ica_analysis_launch.launch_pipeline_analysis(my_api_key, destination_project_id, pipeline_id_to_trigger, my_data_inputs, my_params,my_tags, my_storage_analysis_id, pipeline_run_name,workflow_language)
-                if test_launch is not None:
-                    metadata_to_write[id] = {}
-                    metadata_to_write[id]['analysis_id_triggered'] = test_launch['id']
-                    metadata_to_write[id]['run_id'] = run_id
+                test_launch = None
+                if args.dry_run is not True:
+                    logging_statement(f"Launching downstream analysis for {pipeline_run_name}")
+                    test_launch = ica_analysis_launch.launch_pipeline_analysis(my_api_key, destination_project_id, pipeline_id_to_trigger, my_data_inputs, my_params,my_tags, my_storage_analysis_id, pipeline_run_name,workflow_language)
+                    if test_launch is not None:
+                        metadata_to_write[id] = {}
+                        metadata_to_write[id]['analysis_id_triggered'] = test_launch['id']
+                        metadata_to_write[id]['run_id'] = run_id
+                else:
+                    logging_statement(f"Script was run with dry-run enabled {args.dry_run}")
                 ### write pipeline launch metadata (i.e. analysis_id_monitored,analysis_id_triggered) to analyses_launched_table
             if len(list(metadata_to_write.keys()))> 0 :
                 if os.path.exists(analyses_launched_table) is True:
