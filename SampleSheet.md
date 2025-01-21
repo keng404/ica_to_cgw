@@ -31,8 +31,8 @@ Please refer to help documentation for examples and guidance on v2 samplesheets 
 
 ## The following TSO Data headers are examples of valid headers
 - ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,SPECIMEN_LABEL```
-- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,***SPECIMEN LABEL***```
-- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,***ACCESSION NUMBER***,SPECIMEN_LABEL```
-- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,***ACCESSION-NUMBER***,SPECIMEN_LABEL```
-- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,***SPECIMEN-LABEL***```
-- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,***SPECIMEN_LABEl***```
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,```***SPECIMEN LABEL***
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,```***ACCESSION NUMBER***```,SPECIMEN_LABEL```
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,```***ACCESSION-NUMBER***```,SPECIMEN_LABEL```
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,```***SPECIMEN-LABEL***
+- ```Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2,ACCESSION_NUMBER,```***SPECIMEN_LABEl***
