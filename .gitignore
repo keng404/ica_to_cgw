@@ -5,3 +5,4 @@
 *.csv
 *.log
 *.txt.*
+lenient_samplesheet_parsing.test.sh
