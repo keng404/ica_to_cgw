@@ -301,7 +301,7 @@ def main():
     parser.add_argument('--api_key_file', default=None, type=str, help="file that contains API-Key")
     parser.add_argument('--api_template_file', default=None, type=str, help="file that contains API template for launching analysis for pipeline")
     parser.add_argument('--server_url', default='https://ica.illumina.com', type=str, help="ICA base URL")
-    parser.add_argument('--output_detect_mode', default="inference",const='inference',nargs='?', choices=("inference","direct"), type=str, help="method to determine ICA analysis output folder")
+    parser.add_argument('--output_detect_mode', default="direct",const='direct',nargs='?', choices=("inference","direct"), type=str, help="method to determine ICA analysis output folder")
     parser.add_argument('--dry_run', action="store_true",default=False, help="run script in dry run mode --- no analyses will be launched, but full script will be run")
     parser.add_argument('--storage_size', default="Large",const='Large',nargs='?', choices=("Small","Medium","Large","XLarge","2XLarge","3XLarge"), type=str, help="Storage disk size used for job [OPTIONAL].\nSee https://help.ica.illumina.com/reference/r-pricing#compute for more details.\n")
     args, extras = parser.parse_known_args()
