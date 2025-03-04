@@ -32,7 +32,7 @@ These are custom script(s) based on an end-user's use-case
 ## [fcs.ICA_to_CGW.orchestrator.py](https://github.com/keng404/ica_to_cgw/blob/main/fcs.ICA_to_CGW.orchestrator.py) Process Outline
 
 0) Messages from the script are written by default logfile ```orchestrator.log``` in the directory where you run the script
-	- As a convenience, you can also use the Docker image ```keng404/ica_to_cgw:0.0.2``` to run this script
+	- As a convenience, you can also use the Docker image ```keng404/ica_to_cgw:0.0.3``` to run this script
 1) Monitor TSO500 v2.5.2 analysis
 2) If analysis is running, queued, or in progress
 	- analysis ids are printed out by default ```analyses_monitored_file.txt``` 
