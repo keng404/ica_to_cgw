@@ -165,6 +165,7 @@ def get_analysis_metadata(api_key,project_id,analysis_id):
         raise ValueError(f"Could not get analyses metadata for project: {project_id}")
     return analysis_metadata
 
+
 def get_analysis_output(api_key,project_id,analysis_metadata):
     ### assume user has not output the results of analysis to custom directory
     #search_query_path = "/" + analysis_metadata['reference'] + "/" 

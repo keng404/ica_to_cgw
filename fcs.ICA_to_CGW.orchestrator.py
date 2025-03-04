@@ -16,6 +16,7 @@ import ica_analysis_monitor
 import ica_analysis_launch
 import samplesheet_utils
 import ica_data_transfer
+import ica_analysis_outputs
 ######## import python modules
 import argparse
 import time
@@ -72,7 +73,7 @@ def get_analysis_output_to_copy(analysis_output,analysis_metadata):
                 path_remainder_split = path_remainder.split('/')
                 if len(path_remainder_split) == 1:
                     #logging_statement(f"path_remainder: {path_remainder}")
-                    logging_statement(f"data_to_copy_path: {output['path']}")
+                    #logging_statement(f"data_to_copy_path: {output['path']}")
                     data_to_copy.append(output['id'])
     return data_to_copy
 
@@ -300,6 +301,7 @@ def main():
     parser.add_argument('--api_key_file', default=None, type=str, help="file that contains API-Key")
     parser.add_argument('--api_template_file', default=None, type=str, help="file that contains API template for launching analysis for pipeline")
     parser.add_argument('--server_url', default='https://ica.illumina.com', type=str, help="ICA base URL")
+    parser.add_argument('--output_detect_mode', default="inference",const='inference',nargs='?', choices=("inference","direct"), type=str, help="method to determine ICA analysis output folder")
     parser.add_argument('--dry_run', action="store_true",default=False, help="run script in dry run mode --- no analyses will be launched, but full script will be run")
     parser.add_argument('--storage_size', default="Large",const='Large',nargs='?', choices=("Small","Medium","Large","XLarge","2XLarge","3XLarge"), type=str, help="Storage disk size used for job [OPTIONAL].\nSee https://help.ica.illumina.com/reference/r-pricing#compute for more details.\n")
     args, extras = parser.parse_known_args()
@@ -450,7 +452,12 @@ def main():
                 ### first identify data id of output folder
                 logging_statement(f"first identify data id of output folder for the analysis id: {id}")
                 analysis_metadata = ica_analysis_launch.get_project_analysis(my_api_key,source_project_id,id)
-                analysis_output = ica_analysis_monitor.get_analysis_output(my_api_key,source_project_id,analysis_metadata)
+                if args.output_detect_mode == 'inference':
+                    ### original implementation to get analysis output
+                    analysis_output = ica_analysis_monitor.get_analysis_output(my_api_key,source_project_id,analysis_metadata)
+                else:
+                    #### adding in re-implementation of analysis output
+                    analysis_output = ica_analysis_outputs.get_full_analysis_output(my_api_key,source_project_id,id)
                 #print(f"analysis_output: {analysis_output}")
                 #### folder path
                 data_to_copy = get_analysis_output_to_copy(analysis_output,analysis_metadata)
