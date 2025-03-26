@@ -79,7 +79,7 @@ def get_children_data(api_key,project_id,data_id):
             nextPageToken = children_metadata.json()['nextPageToken']
             while remainingRecords > 0:
                 children_metadata = requests.get(full_url, headers=headers)
-                logging_statement(children_metadata.json()['items'])
+                ####logging_statement(children_metadata.json()['items'])
                 for idx,val in enumerate(children_metadata.json()['items']):
                     if 'data' in children_metadata.json()['items'][idx].keys():
                         datum  = children_metadata.json()['items'][idx]['data']
@@ -94,6 +94,7 @@ def get_children_data(api_key,project_id,data_id):
                 #logging_statement(f"keys_of_interest: {children_metadata.json().keys()}")
                 nextPageToken = children_metadata.json()['nextPageToken']
                 remainingRecords = children_metadata.json()['remainingRecords']
+                logging_statement("performing ICA analysis data lookup")
                 #logging_statement(f"remainingRecords: {remainingRecords}, nextPageToken: {nextPageToken}")
                 endpoint = f"/api/projects/{project_id}/data/{data_id}/children?pageToken={nextPageToken}&pageSize={pageSize}"
                 full_url = api_base_url + endpoint  

@@ -150,7 +150,7 @@ def get_header_aliases(parsed_dict):
 ###############################
 def get_hard_coded_values(row,header_dict):
     alias_dict = get_header_aliases(header_dict)
-    row[header_dict['LANE']] = '1'
+    #row[header_dict['LANE']] = '1'
     row[header_dict[alias_dict['SPECIMEN LABEL']]] = 'Primary Specimen'
     row[header_dict['SEQUENCING TYPE']] = 'PAIRED END'
     return row
@@ -179,6 +179,8 @@ def update_barcode(row,header_dict,parsed_row,parsed_dict):
             row[header_dict['SEQUENCING TYPE']] = 'SINGLE END'
     return row
 def update_parsed(row,header_dict,parsed_row,parsed_dict):
+    #print(f"parsed_dict: {parsed_dict}")
+    #print(f"parsed_row: {parsed_row}")
     alias_dict = get_header_aliases(parsed_dict)
     #print(f"header aliases : {alias_dict}")
     row_parsed_mapping = {}
@@ -187,8 +189,10 @@ def update_parsed(row,header_dict,parsed_row,parsed_dict):
     row_parsed_mapping["SAMPLE TYPE"] = "Sample_Type"
     row_parsed_mapping["SAMPLE ID"] = "Sample_ID"
     row_parsed_mapping["PAIR ID"] = "Pair_ID"
+    row_parsed_mapping["LANE"] = "Lane"
     ######## check parsed_dict object before performing update
     fields_not_found  = []
+    fields_with_defaults = ["Lane","Pair_ID","Sample_Type","ACCESSION NUMBER","SPECIMEN LABEL"]
     for idx,v in enumerate(list(row_parsed_mapping.keys())):
         lookup_key = row_parsed_mapping[v]
         if lookup_key not in list(parsed_dict.keys()):
@@ -196,26 +200,46 @@ def update_parsed(row,header_dict,parsed_row,parsed_dict):
     if len(fields_not_found) > 0:
        fields_not_found_str = ",".join(fields_not_found)
        logging_statement(f"[WARNING]: Could not find {fields_not_found_str} in the TSO Data section of your samplesheet\nPlease check your samplesheet")
+       fields_not_found_defaults_str = ",".join(fields_with_defaults)
+       logging_statement(f" Will provide default values for {fields_not_found_defaults_str} if not provided in your samplesheet")
+    ### Assume PAIR ID or ACCESSION NUMBER is Sample_ID if neither column is provided in samplesheet   
+    if "Pair_ID" not in list(parsed_dict.keys()):
+        row_parsed_mapping["PAIR ID"] = "Sample_ID"
+    if "ACCESSION NUMBER" not in list(parsed_dict.keys()):
+        row_parsed_mapping["ACCESSION NUMBER"] = "Sample_ID"
     #############
     for k,v in enumerate(row_parsed_mapping):
         lookup_key = row_parsed_mapping[v]
         #if lookup_key in list(parsed_dict.keys()):
-        row[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
+        ### create dummy values if LANE or SPECIMEN LABEL columns are not provided in samplesheet 
+        if lookup_key not in list(parsed_dict.keys()): 
+            if "SPECIMEN LABEL" == lookup_key:
+                row[header_dict["SPECIMEN LABEL"]] = "Primary Specimen"
+            elif "Lane" == lookup_key:
+                row[header_dict["LANE"]] = "1"
+            elif "Sample_Type" == lookup_key:
+                row[header_dict["Sample_Type"]] = "DNA"
+        else:
+            row[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
         #else:
         #    debug_string = ",".join(parsed_row)
         #    raise ValueError(f"Could not find value for {lookup_key} in {debug_string}")
+    #print(f"updated row : {row}")
     return row
 
 def get_updated_row(CGW_header_dict,parsed_row,parsed_dict,secondary_row,secondary_dict):
+    #print(f"row to update: {parsed_row}")
     ### set row to dummy values and update
     row_to_craft = GGW_MANIFEST_HEADER_ARR
     ### update row - fields with hard-coded values:
     row_to_craft1 = get_hard_coded_values(row_to_craft,CGW_header_dict)
     ### update row - BARCODE field based off of TSO500 Data section of V2 samplesheet
-    row_to_craft2 = update_barcode(row_to_craft1,CGW_header_dict,parsed_row,parsed_dict)
-    if row_to_craft2 == row_to_craft1:
+    row_to_craft2 = update_barcode(row_to_craft,CGW_header_dict,parsed_row,parsed_dict)
+    #print(f"row after barcode update : {row_to_craft2}")
+    if row_to_craft2[CGW_header_dict["BARCODE"]] == "BARCODE":
         ### update row - BARCODE field based off of BCLConvert Data section of V2 samplesheet
         row_to_craft2 = update_barcode(row_to_craft2,CGW_header_dict,secondary_row,secondary_dict)
+        print(f"row after barcode update --- try 2 : {row_to_craft2}")
     ### update row based on other mappings
     row_to_craft3 = update_parsed(row_to_craft2,CGW_header_dict,parsed_row,parsed_dict)
     return row_to_craft3
@@ -239,11 +263,13 @@ def generate_CGW_sample_manifest(folder_basename,parsed_object,secondary_parsed_
 
     for idx,sample in enumerate(samples):
         parsed_row = sample_info[sample]
+        #print(f"Writing manifest row for {sample}")
+        #print(f"SampleSheet content {parsed_row}")
         secondary_row = bclconvert_sample_info[sample]
         row_to_write = get_updated_row(CGW_header_dict,parsed_row,parsed_dict,secondary_row,secondary_dict)
         ### update RUN ID as another function and not apart of the  update function
         row_to_write = update_run_id(row_to_write,CGW_header_dict,folder_basename)
-        #print(f"row_to_write {row_to_write}")
+        print(f"row_to_write {row_to_write}")
         manifest_rows.append(",".join(row_to_write))
         #print(f"manifest_rows {manifest_rows}")
     return manifest_rows

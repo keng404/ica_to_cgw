@@ -461,7 +461,7 @@ def main():
                 #print(f"analysis_output: {analysis_output}")
                 #### folder path
                 data_to_copy = get_analysis_output_to_copy(analysis_output,analysis_metadata)
-                logging_statement(f"Data to copy: {data_to_copy}")
+                ###logging_statement(f"Data to copy: {data_to_copy}")
                 
                 ########### pass through result files and folders to identify the SampleSheet and folder of interest
                 search_query_path = "/" + analysis_metadata['reference'] + "/" 
@@ -685,7 +685,7 @@ def main():
                 if os.path.exists(analyses_launched_table) is True:
                     logging_statement(f"Adding analysis launched from {analyses_launched_table}")
                     #### format is analysis_id_monitored,analysis_id_triggered
-                    with open(analyses_launched_table, 'w+') as f:
+                    with open(analyses_launched_table, 'a') as f:
                         for id in list(metadata_to_write.keys()):
                             line_arr = [id,metadata_to_write[id]['analysis_id_triggered'],metadata_to_write[id]['run_id']]
                             new_str = ",".join(line_arr)
