@@ -192,7 +192,8 @@ def update_parsed(row,header_dict,parsed_row,parsed_dict):
     row_parsed_mapping["LANE"] = "Lane"
     ######## check parsed_dict object before performing update
     fields_not_found  = []
-    fields_with_defaults = ["Lane","Pair_ID","Sample_Type","ACCESSION NUMBER","SPECIMEN LABEL"]
+    fields_with_defaults = ["Lane","Pair_ID","Sample_Type","ACCESSION NUMBER","SPECIMEN LABEL", alias_dict["ACCESSION NUMBER"], alias_dict["SPECIMEN LABEL"]]
+    fields_with_defaults = list(set(fields_with_defaults))
     for idx,v in enumerate(list(row_parsed_mapping.keys())):
         lookup_key = row_parsed_mapping[v]
         if lookup_key not in list(parsed_dict.keys()):
@@ -205,7 +206,7 @@ def update_parsed(row,header_dict,parsed_row,parsed_dict):
     ### Assume PAIR ID or ACCESSION NUMBER is Sample_ID if neither column is provided in samplesheet   
     if "Pair_ID" not in list(parsed_dict.keys()):
         row_parsed_mapping["PAIR ID"] = "Sample_ID"
-    if "ACCESSION NUMBER" not in list(parsed_dict.keys()):
+    if alias_dict["ACCESSION NUMBER"] not in list(parsed_dict.keys()):
         row_parsed_mapping["ACCESSION NUMBER"] = "Sample_ID"
     #############
     for k,v in enumerate(row_parsed_mapping):
@@ -213,7 +214,7 @@ def update_parsed(row,header_dict,parsed_row,parsed_dict):
         #if lookup_key in list(parsed_dict.keys()):
         ### create dummy values if LANE or SPECIMEN LABEL columns are not provided in samplesheet 
         if lookup_key not in list(parsed_dict.keys()): 
-            if "SPECIMEN LABEL" == lookup_key:
+            if alias_dict["SPECIMEN LABEL"]== lookup_key:
                 row[header_dict["SPECIMEN LABEL"]] = "Primary Specimen"
             elif "Lane" == lookup_key:
                 row[header_dict["LANE"]] = "1"
