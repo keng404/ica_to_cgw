@@ -204,10 +204,12 @@ def update_parsed(row,header_dict,parsed_row,parsed_dict):
        fields_not_found_defaults_str = ",".join(fields_with_defaults)
        logging_statement(f" Will provide default values for {fields_not_found_defaults_str} if not provided in your samplesheet")
     ### Assume PAIR ID or ACCESSION NUMBER is Sample_ID if neither column is provided in samplesheet   
+    shorten_accession_number = False
     if "Pair_ID" not in list(parsed_dict.keys()):
         row_parsed_mapping["PAIR ID"] = "Sample_ID"
     if alias_dict["ACCESSION NUMBER"] not in list(parsed_dict.keys()):
         row_parsed_mapping["ACCESSION NUMBER"] = "Sample_ID"
+        shorten_accession_number = True
     #############
     for k,v in enumerate(row_parsed_mapping):
         lookup_key = row_parsed_mapping[v]
@@ -221,7 +223,17 @@ def update_parsed(row,header_dict,parsed_row,parsed_dict):
             elif "Sample_Type" == lookup_key:
                 row[header_dict["Sample_Type"]] = "DNA"
         else:
-            row[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
+            if v != alias_dict["ACCESSION NUMBER"]:
+                row[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
+            else:
+                if shorten_accession_number:
+                    sample_id = parsed_row[parsed_dict[lookup_key]]
+                    sample_id_split = sample_id.split("-")
+                    new_accession_number = "-".join([sample_id_split[0],sample_id_split[1]])
+                    logging_statement(f"Shortening {v} from {sample_id} to {new_accession_number}")
+                    row[header_dict[v]] = new_accession_number
+                else:
+                    row[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
         #else:
         #    debug_string = ",".join(parsed_row)
         #    raise ValueError(f"Could not find value for {lookup_key} in {debug_string}")
