@@ -109,12 +109,12 @@ def bclconvert_from_v2_samplesheet(samplesheet_data):
 ###############            
 GGW_MANIFEST_HEADER = 'ACCESSION NUMBER,SPECIMEN LABEL,RUN ID,LANE,BARCODE,SEQUENCING TYPE,SAMPLE TYPE,SAMPLE ID,PAIR ID'
 GGW_MANIFEST_HEADER_ARR =   GGW_MANIFEST_HEADER.split(',')
+
 def get_header_dict(header_array):
     header_dict = {}
     for idx,field in enumerate(header_array):
         header_dict[field] = idx
     return header_dict 
-
 HEADERS_WITH_ALIASES = ["ACCESSION NUMBER","SPECIMEN LABEL"]
 def get_header_aliases(parsed_dict):
     alias_dict = dict()
@@ -148,12 +148,17 @@ def get_header_aliases(parsed_dict):
 # SAMPLE ID is Sample_ID
 # PAIR ID is PAIR ID 
 ###############################
-def get_hard_coded_values(row,header_dict):
-    alias_dict = get_header_aliases(header_dict)
+#get_hard_coded_values(row_to_craft,CGW_header_dict,parsed_dict)
+def get_hard_coded_values(row,header_dict,parsed_dict):
+    row1 = row
+    header_dict1 = header_dict
+    alias_dict = get_header_aliases(parsed_dict)
     #row[header_dict['LANE']] = '1'
-    row[header_dict[alias_dict['SPECIMEN LABEL']]] = 'Primary Specimen'
-    row[header_dict['SEQUENCING TYPE']] = 'PAIRED END'
-    return row
+    print(f"header_dict1: {header_dict1}")
+    print(f"alias_dict: {alias_dict}")
+    row1[header_dict1['SPECIMEN LABEL']] = 'Primary Specimen'
+    row1[header_dict1['SEQUENCING TYPE']] = 'PAIRED END'
+    return row1
 def update_run_id(row,header_dict,run_folder_basename):
     row[header_dict['RUN ID']] = run_folder_basename
     return row
@@ -161,6 +166,7 @@ def update_run_id(row,header_dict,run_folder_basename):
 def update_barcode(row,header_dict,parsed_row,parsed_dict):
     index1 = ""
     index2 = ""
+    row1 = row
     if "Index" in parsed_dict.keys():
         index1 = parsed_row[parsed_dict['Index']]
     if "Index2" in parsed_dict.keys():
@@ -170,15 +176,16 @@ def update_barcode(row,header_dict,parsed_row,parsed_dict):
     if "index2" in parsed_dict.keys():
         index2 = parsed_row[parsed_dict['index2']]
     if index1 != "" and index2 != "":
-        row[header_dict['BARCODE']] = f"{index1}-{index2}"
+        row1[header_dict['BARCODE']] = f"{index1}-{index2}"
     elif index1 == "" and index2 != "":
-        row[header_dict['BARCODE']] = f"{index2}"
-        row[header_dict['SEQUENCING TYPE']] = 'SINGLE END'
+        row1[header_dict['BARCODE']] = f"{index2}"
+        row1[header_dict['SEQUENCING TYPE']] = 'SINGLE END'
     elif index2 == "" and index1 != "":
-            row[header_dict['BARCODE']] = f"{index1}"
-            row[header_dict['SEQUENCING TYPE']] = 'SINGLE END'
-    return row
+            row1[header_dict['BARCODE']] = f"{index1}"
+            row1[header_dict['SEQUENCING TYPE']] = 'SINGLE END'
+    return row1
 def update_parsed(row,header_dict,parsed_row,parsed_dict):
+    row1 = row
     #print(f"parsed_dict: {parsed_dict}")
     #print(f"parsed_row: {parsed_row}")
     alias_dict = get_header_aliases(parsed_dict)
@@ -217,35 +224,39 @@ def update_parsed(row,header_dict,parsed_row,parsed_dict):
         ### create dummy values if LANE or SPECIMEN LABEL columns are not provided in samplesheet 
         if lookup_key not in list(parsed_dict.keys()): 
             if alias_dict["SPECIMEN LABEL"]== lookup_key:
-                row[header_dict["SPECIMEN LABEL"]] = "Primary Specimen"
+                row1[header_dict[alias_dict["SPECIMEN LABEL"]]] = "Primary Specimen"
             elif "Lane" == lookup_key:
-                row[header_dict["LANE"]] = "1"
+                row1[header_dict["LANE"]] = "1"
             elif "Sample_Type" == lookup_key:
-                row[header_dict["Sample_Type"]] = "DNA"
+                row1[header_dict["Sample_Type"]] = "DNA"
         else:
             if v != alias_dict["ACCESSION NUMBER"]:
-                row[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
+                row1[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
             else:
                 if shorten_accession_number:
                     sample_id = parsed_row[parsed_dict[lookup_key]]
                     sample_id_split = sample_id.split("-")
-                    new_accession_number = "-".join([sample_id_split[0],sample_id_split[1]])
-                    logging_statement(f"Shortening {v} from {sample_id} to {new_accession_number}")
-                    row[header_dict[v]] = new_accession_number
+                    if(len(sample_id_split) > 1) :
+                        new_accession_number = "-".join([sample_id_split[0],sample_id_split[1]])
+                        logging_statement(f"Shortening {v} from {sample_id} to {new_accession_number}")
+                        row1[header_dict[v]] = new_accession_number
+                    else:
+                        logging_statement(f"Using {sample_id} for {v}")
+                        row1[header_dict[v]] = sample_id  
                 else:
-                    row[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
+                    row1[header_dict[v]] = parsed_row[parsed_dict[lookup_key]]
         #else:
         #    debug_string = ",".join(parsed_row)
         #    raise ValueError(f"Could not find value for {lookup_key} in {debug_string}")
     #print(f"updated row : {row}")
-    return row
+    return row1
 
 def get_updated_row(CGW_header_dict,parsed_row,parsed_dict,secondary_row,secondary_dict):
     #print(f"row to update: {parsed_row}")
     ### set row to dummy values and update
     row_to_craft = GGW_MANIFEST_HEADER_ARR
     ### update row - fields with hard-coded values:
-    row_to_craft1 = get_hard_coded_values(row_to_craft,CGW_header_dict)
+    row_to_craft1 = get_hard_coded_values(row_to_craft,CGW_header_dict,parsed_dict)
     ### update row - BARCODE field based off of TSO500 Data section of V2 samplesheet
     row_to_craft2 = update_barcode(row_to_craft,CGW_header_dict,parsed_row,parsed_dict)
     #print(f"row after barcode update : {row_to_craft2}")
@@ -258,7 +269,10 @@ def get_updated_row(CGW_header_dict,parsed_row,parsed_dict,secondary_row,seconda
     return row_to_craft3
 
 def generate_CGW_sample_manifest(folder_basename,parsed_object,secondary_parsed_object):
+    GGW_MANIFEST_HEADER = 'ACCESSION NUMBER,SPECIMEN LABEL,RUN ID,LANE,BARCODE,SEQUENCING TYPE,SAMPLE TYPE,SAMPLE ID,PAIR ID'
+    GGW_MANIFEST_HEADER_ARR =   GGW_MANIFEST_HEADER.split(',')
     CGW_header_dict = get_header_dict(GGW_MANIFEST_HEADER_ARR)
+    print(f"CGW_header_dict: {CGW_header_dict}")
     parsed_dict = parsed_object['header_dict']
     secondary_dict = secondary_parsed_object['header_dict']
     print(f"Header Fields of your samplesheet's TSO500 Data section : parsed dict {parsed_dict}")
@@ -279,11 +293,11 @@ def generate_CGW_sample_manifest(folder_basename,parsed_object,secondary_parsed_
         #print(f"Writing manifest row for {sample}")
         #print(f"SampleSheet content {parsed_row}")
         secondary_row = bclconvert_sample_info[sample]
-        row_to_write = get_updated_row(CGW_header_dict,parsed_row,parsed_dict,secondary_row,secondary_dict)
+        row_to_write1 = get_updated_row(CGW_header_dict,parsed_row,parsed_dict,secondary_row,secondary_dict)
         ### update RUN ID as another function and not apart of the  update function
-        row_to_write = update_run_id(row_to_write,CGW_header_dict,folder_basename)
-        print(f"row_to_write {row_to_write}")
-        manifest_rows.append(",".join(row_to_write))
+        row_to_write2 = update_run_id(row_to_write1,CGW_header_dict,folder_basename)
+        print(f"row_to_write {row_to_write2}")
+        manifest_rows.append(",".join(row_to_write2))
         #print(f"manifest_rows {manifest_rows}")
     return manifest_rows
 
