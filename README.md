@@ -1,6 +1,8 @@
 # ica_to_cgw
 An orchestration approach to monitor analyses from Illumina Connected Analytics (ICA) and ingest the analyses into Velsera's GCW
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/keng404/ica_to_cgw)
+
 ## approach
 
 ## helper functions
